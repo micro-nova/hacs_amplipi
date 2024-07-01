@@ -100,7 +100,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     groups: list[MediaPlayerEntity] = [
         AmpliPiZone(DOMAIN, None, group, status.streams, status.sources, vendor, version, image_base_path, amplipi)
         for group in status.groups]
-
+    
     announcer: list[MediaPlayerEntity] = [
         AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi)
     ]
@@ -863,10 +863,10 @@ class AmpliPiZone(MediaPlayerEntity):
             for source in sources:
                 if source is not None and (source.input == '' or source.input == 'None' or source.input is None):
                     self._current_source = source
-
+            
             if self._current_source is None:
                 raise Exception("Not attached to a source and all sources are in use. Clear out a source or select an already existing one and try again.")
-
+                
 
         media_id = async_process_play_media_url(self.hass, media_id)
         await self._client.play_media(
@@ -934,7 +934,7 @@ class AmpliPiZone(MediaPlayerEntity):
         await self.async_update()
 
 class AmpliPiAnnouncer(MediaPlayerEntity):
-
+    
     @property
     def should_poll(self):
         """Polling needed."""
@@ -959,22 +959,22 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
     @property
     def available(self):
         return self._available
-
+    
     @property
     def supported_features(self):
         self._attr_app_name = "test"
         return SUPPORT_AMPLIPI_ANNOUNCE
-
+    
     @property
     def media_content_type(self):
         """Content type of current playing media."""
         return MEDIA_TYPE_MUSIC
-
+    
     @property
     def media_content_type(self):
         """Content type of current playing media."""
         return "speaker"
-
+    
     @property
     def entity_registry_enabled_default(self):
         """Return if the entity should be enabled when first added to the entity registry."""
