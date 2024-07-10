@@ -36,6 +36,7 @@ SUPPORT_AMPLIPI_DAC = (
 SUPPORT_AMPLIPI_ANNOUNCE = (
         SUPPORT_PLAY_MEDIA
         | SUPPORT_BROWSE_MEDIA
+        | SUPPORT_VOLUME_SET
 )
 
 SUPPORT_LOOKUP_DICT = {
@@ -157,6 +158,14 @@ class AmpliPiSource(MediaPlayerEntity):
         if volume is None:
             return
         _LOGGER.warning(f"setting volume to {volume}")
+        
+        group = next(filter(lambda z: z.vol_f is not None, self._groups), None)
+        zone = next(filter(lambda z: z.vol_f is not None, self._zones), None)
+        if group is not None:
+            group.vol_f = volume
+        elif zone is not None:
+            zone.vol_f = volume
+        
         await self._update_zones(
             MultiZoneUpdate(
                 zones=[z.id for z in self._zones],
@@ -453,9 +462,7 @@ class AmpliPiSource(MediaPlayerEntity):
     def source_list(self):
         """List of available input sources."""
         streams = ['None']
-        if self._source is not None:
-            streams += [self._source.name]
-        streams += [stream.name for stream in self._streams]
+        streams += [stream.name for stream in self._streams if stream.id >= 1000 or stream.id - 996 == self._id]
         return streams
 
     async def _update_source(self, update: SourceUpdate):
@@ -585,6 +592,12 @@ class AmpliPiZone(MediaPlayerEntity):
     async def async_set_volume_level(self, volume):
         if volume is None:
             return
+        
+        if self._is_group and self._group is not None:
+            self._group.vol_f = volume
+        elif self._zone is not None:
+            self._zone.vol_f = volume
+    
         _LOGGER.info(f"setting volume to {volume}")
         if self._is_group:
             await self._update_group(
@@ -657,8 +670,8 @@ class AmpliPiZone(MediaPlayerEntity):
     def name(self):
         """Return the name of the zone."""
         if not self._available:
-            return self._name + " (Unavailable)"
-        return self._name
+            return "AmpliPi: " + self._name + " (Unavailable)"
+        return "AmpliPi: " + self._name
 
     async def async_update(self):
         """Retrieve latest state."""
@@ -955,6 +968,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         self._extra_attributes = []
         self._image_base_path = image_base_path
         self._name = "AmpliPi Announcement"
+        self._volume = 0.5
 
     @property
     def available(self):
@@ -962,7 +976,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
     
     @property
     def supported_features(self):
-        self._attr_app_name = "test"
+        self._attr_app_name = "AmpliPi Announcement Channel"
         return SUPPORT_AMPLIPI_ANNOUNCE
     
     @property
@@ -993,6 +1007,10 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
             sw_version=self._version,
             configuration_url=self._image_base_path
         )
+
+    @property
+    def volume_level(self):
+        return self._volume
 
     @property
     def unique_id(self):
@@ -1029,6 +1047,13 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         await self._client.announce(
             Announcement(
                 media=media_id,
+                vol_f=self._volume
             )
         )
         pass
+
+
+    async def async_set_volume_level(self, volume):
+        if volume is None:
+            return
+        self._volume = volume
