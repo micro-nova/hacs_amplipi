@@ -671,8 +671,6 @@ class AmpliPiZone(MediaPlayerEntity):
     @property
     def name(self):
         """Return the name of the zone."""
-        if not self._available and False: # Disabled, might be re-enabled in the future.
-            return "AmpliPi: " + self._name
         return "AmpliPi: " + self._name
 
     async def async_update(self):
@@ -1023,8 +1021,6 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
     @property
     def name(self):
         """Return the name of the zone."""
-        if not self._available:
-            return "AmpliPi: " + self._name
         return "AmpliPi: " + self._name
 
     @property
