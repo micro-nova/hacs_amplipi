@@ -9,7 +9,7 @@
   "homekit": {},
   "dependencies": [],
   "codeowners": [
-    "@gabehealey"
+    "@micro-nova"
   ],
   "iot_class": "local_polling",
   "version": "1.0"
