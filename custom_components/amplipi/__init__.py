@@ -8,9 +8,9 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import logging
 from .coordinator import AmpliPiDataClient
 
-from .const import DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, CONF_API_PATH
+from .const import DOMAIN, AMPLIPI_OBJECT, UPDATER_URL, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, CONF_API_PATH
 
-PLATFORMS = ["media_player"]
+PLATFORMS = ["media_player", "update"]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -18,7 +18,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = AmpliPiDataClient(
             hass=hass,
             config_entry=entry,
-            logger=_LOGGER,
             endpoint=f'http://{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}/api/',
             timeout=10,
             http_session=async_get_clientsession(hass)
@@ -34,6 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CONF_VERSION: entry.data[CONF_VERSION],
         CONF_WEBAPP: entry.data[CONF_WEBAPP],
         CONF_API_PATH: entry.data[CONF_API_PATH],
+        UPDATER_URL: "http://{entry.data[CONF_HOST]}:5001"
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
