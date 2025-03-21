@@ -83,11 +83,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi_coordinator)
         for stream in status.streams
     ]
-    
-    streams: list[AmpliPiMediaPlayer] = [
-        AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi_coordinator)
-        for stream in status.streams
-    ]
 
     announcer: list[MediaPlayerEntity] = [
         AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi_coordinator)
