@@ -17,10 +17,12 @@ from homeassistant.const import CONF_NAME, STATE_PLAYING, STATE_PAUSED, STATE_ID
 from homeassistant.helpers.entity import DeviceInfo
 from pyamplipi.amplipi import AmpliPi
 from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, Announcement, MultiZoneUpdate, PlayMedia
+from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, Announcement, MultiZoneUpdate, PlayMedia
 
 from .coordinator import AmpliPiCoordinator
 from .const import (
     DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, )
+from .models import Source, Group, Zone, Stream
 from .models import Source, Group, Zone, Stream
 
 SUPPORT_AMPLIPI_DAC = (
@@ -60,26 +62,29 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the AmpliPi MultiZone Audio Controller"""
     hass_entry = hass.data[DOMAIN][config_entry.entry_id]
 
-    amplipi: AmpliPi = hass_entry[AMPLIPI_OBJECT]
+    amplipi_coordinator: AmpliPiCoordinator = hass_entry[AMPLIPI_OBJECT]
     vendor = hass_entry[CONF_VENDOR]
     name = hass_entry[CONF_NAME]
     version = hass_entry[CONF_VERSION]
     image_base_path = f'{hass_entry[CONF_WEBAPP]}'
 
-    data_coordinator = AmpliPiCoordinator(hass, _LOGGER, config_entry, amplipi)
-
-    status = await data_coordinator._async_update_data()
+    status = amplipi_coordinator.data if amplipi_coordinator.data is not None else await amplipi_coordinator.get_status()
     sources: list[AmpliPiMediaPlayer] = [
-        AmpliPiSource(data_coordinator, DOMAIN, source, status.streams, vendor, version, image_base_path, amplipi)
+        AmpliPiSource(DOMAIN, source, status.streams, vendor, version, image_base_path, amplipi_coordinator)
         for source in status.sources]
 
     zones: list[AmpliPiMediaPlayer] = [
-        AmpliPiZone(data_coordinator, DOMAIN, zone, None, status.streams, status.sources, vendor, version, image_base_path, amplipi)
+        AmpliPiZone(DOMAIN, zone, None, status.streams, status.sources, vendor, version, image_base_path, amplipi_coordinator)
         for zone in status.zones]
 
     groups: list[AmpliPiMediaPlayer] = [
-        AmpliPiZone(data_coordinator, DOMAIN, None, group, status.streams, status.sources, vendor, version, image_base_path, amplipi)
+        AmpliPiZone(DOMAIN, None, group, status.streams, status.sources, vendor, version, image_base_path, amplipi_coordinator)
         for group in status.groups]
+    
+    streams: list[AmpliPiMediaPlayer] = [
+        AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi_coordinator)
+        for stream in status.streams
+    ]
     
     streams: list[AmpliPiMediaPlayer] = [
         AmpliPiStream(data_coordinator, DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi)
@@ -87,9 +92,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     ]
 
     announcer: list[MediaPlayerEntity] = [
-        AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi)
+        AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi_coordinator)
     ]
 
+    async_add_entities(sources + zones + groups + streams + announcer)
     async_add_entities(sources + zones + groups + streams + announcer)
 
 
@@ -112,9 +118,6 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     """
         Parent class of all AmpliPi MediaPlayer entities. Used to enforce common variables and provide shared functionality.
     """
-    # State repository
-    coordinator: AmpliPiCoordinator
-
     # The amplipi-side id
     _id: int
 
@@ -131,7 +134,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     # Home assistant particulars that are populated at entity instantiation via hass
     _vendor: str
     _version: str
-    _client: AmpliPi
+    _client: AmpliPiCoordinator
     _domain: str
     _image_base_path: str # Where the album art metadata is stored on home assistant
 
@@ -156,8 +159,8 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
 
     def get_entry_by_value(self, value: str) -> Union[Source, Zone, Group, Stream, None]:
         """Find what dict within the state array has a given value and return said dict"""
-        if self.coordinator.data is not None:
-            for category in (self.coordinator.data.sources, self.coordinator.data.zones, self.coordinator.data.groups, self.coordinator.data.streams):
+        if self._client.data is not None:
+            for category in (self._client.data.sources, self._client.data.zones, self._client.data.groups, self._client.data.streams):
                 for entry in category:
                     if value in entry.model_dump().values():
                         return entry
@@ -183,11 +186,11 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     def available_streams(self, source: Source):
         """Returns the available streams (generally all of them minus three of the four RCAs) relative to the provided source"""
         streams: List[str] = ['None']
-        if self.coordinator.data is not None:
+        if self._client.data is not None:
             # Excludes every RCA except for the one related to the given source
             RCAs = [996, 997, 998, 999]
             rca_selectable = RCAs[source.id]
-            stream_entries = self.coordinator.data.streams
+            stream_entries = self._client.data.streams
             if stream_entries:
                 for entry in stream_entries:
                     amplipi_id = self.extract_amplipi_id_from_unique_id(entry.unique_id)
@@ -205,7 +208,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
             if self._current_source is not None and source is not None and source.id != self._current_source.id:
                 raise Exception("RCA streams can only connect to sources with the same ID")
 
-            state = self.coordinator.data
+            state = self._client.data
             source = state.sources[get_fixed_source_id(stream)]
             # It would be cleaner to do the following, but pyamplipi doesn't support RCA stream's index value atm:
             # source = state.sources[self._stream.index]
@@ -246,7 +249,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
 
     async def async_connect_zones_to_stream(self, stream: Stream, zones: Optional[List[int]], groups: Optional[List[int]]):
         """Connects zones and/or groups to the source of the selected stream. If stream does not have a source, select one"""
-        state = self.coordinator.data
+        state = self._client.data
         source_id = next((s.id for s in state.sources if s.input == f"stream={stream.id}"), None)
         if source_id is None:
             source_id = await self.async_connect_stream_to_source(stream)
@@ -300,7 +303,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     
     async def swap_source(self, old_source: int, new_source: Optional[int] = None):
         """Moves a stream from one source to another, ensuring all zones follow. Generally only used for RCA streams, but able to be used by anyone."""
-        state = self.coordinator.data
+        state = self._client.data
         
         moved_stream: Stream = next(filter(lambda s: state.sources[old_source].input == f"stream={s.id}", state.streams), None)
         if moved_stream is not None and moved_stream.type != "rca":
@@ -413,9 +416,9 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
 class AmpliPiSource(AmpliPiMediaPlayer):
     """Representation of an AmpliPi Source Input, of which 4 are supported (Hard Coded)."""
 
-    def __init__(self, coordinator: AmpliPiCoordinator, namespace: str, source: Source, streams: List[Stream], vendor: str, version: str,
-                 image_base_path: str, client: AmpliPi):
-        super().__init__(coordinator)
+    def __init__(self, namespace: str, source: Source, streams: List[Stream], vendor: str, version: str,
+                 image_base_path: str, client: AmpliPiCoordinator):
+        super().__init__(client)
         self._streams: List[Stream] = streams
         self._source = source
 
@@ -609,7 +612,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for source {self._source.id}')
-        state = self.coordinator.data
+        state = self._client.data
         if state is not None:
             try:
                 source = next(filter(lambda z: z.id == self._source.id, state.sources), None)
@@ -732,11 +735,11 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         and mute controls and the ability to change the current 'source' a
         zone is tied to"""
 
-    def __init__(self, coordinator: AmpliPiCoordinator, namespace: str, zone: Zone, group: Group,
+    def __init__(self, namespace: str, zone: Zone, group: Group,
                  streams: List[Stream], sources: List[Source],
                  vendor: str, version: str, image_base_path: str,
-                 client: AmpliPi):
-        super().__init__(coordinator)
+                 client: AmpliPiCoordinator):
+        super().__init__(client)
         self._sources = sources
         self._split_group: bool = False
         self._domain = namespace
@@ -890,7 +893,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for source {self._id}')
-        state = self.coordinator.data
+        state = self._client.data
         if state is not None:
             zone = None
             group = None
@@ -1100,7 +1103,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
     async def _get_extra_attributes(self):
         if self._group is not None:
-            state = self.coordinator.data
+            state = self._client.data
             zone_ids = []
 
             for zone_id in self._group.zones:
@@ -1115,7 +1118,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             self._extra_attributes = {"amplipi_zone_id" : self._zone.id}
 
     async def _update_available(self):
-        state = self.coordinator.data
+        state = self._client.data
         if self._group is not None:
             for zone_id in self._group.zones:
                 for state_zone in state.zones:
@@ -1239,11 +1242,11 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         and mute controls and the ability to change the current 'source' a
         stream is tied to"""
 
-    def __init__(self, coordinator: AmpliPiCoordinator, namespace: str, stream: Stream,
+    def __init__(self, namespace: str, stream: Stream,
                  sources: List[Source],
                  vendor: str, version: str, image_base_path: str,
-                 client: AmpliPi):
-        super().__init__(coordinator)
+                 client: AmpliPiCoordinator):
+        super().__init__(client)
         self._stream: Stream = stream
         self._current_stream = self._stream # Make an alias for use with AmpliPiMediaPlayer functions while keeping local verbiage more correct
         self._current_source = None
@@ -1373,7 +1376,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for stream {self._id}')
-        state = self.coordinator.data
+        state = self._client.data
         if state is not None:
             groups = []
             zones = []
