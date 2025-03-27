@@ -11,7 +11,7 @@ from homeassistant.components.media_player import MediaPlayerDeviceClass, MediaP
 from homeassistant.components.media_player.browse_media import (
     async_process_play_media_url,
 )
-from homeassistant.const import CONF_NAME, STATE_PLAYING, STATE_PAUSED, STATE_IDLE, STATE_UNKNOWN
+from homeassistant.const import CONF_NAME, STATE_PLAYING, STATE_PAUSED, STATE_IDLE, STATE_UNKNOWN, STATE_OFF
 from homeassistant.helpers.entity import DeviceInfo
 from pyamplipi.amplipi import AmpliPi
 from pyamplipi.models import ZoneUpdate, Source, SourceUpdate, GroupUpdate, Stream, Group, Zone, Announcement, \
@@ -31,6 +31,11 @@ SUPPORT_AMPLIPI_DAC = (
         | MediaPlayerEntityFeature.TURN_OFF
 )
 
+DEFAULT_SUPPORTED_COMMANDS = ( # Used to forcibly support a shortlist of commands regardless of sub-type
+        MediaPlayerEntityFeature.TURN_OFF
+        | MediaPlayerEntityFeature.TURN_ON
+        )
+
 SUPPORT_AMPLIPI_ANNOUNCE = (
         MediaPlayerEntityFeature.PLAY_MEDIA
         | MediaPlayerEntityFeature.BROWSE_MEDIA
@@ -44,7 +49,6 @@ SUPPORT_LOOKUP_DICT = {
     'next': MediaPlayerEntityFeature.NEXT_TRACK,
     'prev': MediaPlayerEntityFeature.PREVIOUS_TRACK,
 }
-
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 1
@@ -134,6 +138,16 @@ class AmpliPiSource(MediaPlayerEntity):
         self._unique_id = f"{namespace}_source_{source.id}"
         self._last_update_successful = False
         self._attr_device_class = MediaPlayerDeviceClass.RECEIVER
+        self._is_off = False
+
+    async def async_toggle(self):
+        if self._is_off:
+            await self.async_turn_on()
+        else:
+            await self.async_turn_off()
+
+    async def async_turn_on(self):
+        self._is_off = False
 
     async def async_turn_off(self):
         if self._source is not None:
@@ -141,6 +155,16 @@ class AmpliPiSource(MediaPlayerEntity):
             await self._update_source(SourceUpdate(
                 input='None'
             ))
+            await self._update_zones(
+                MultiZoneUpdate(
+                    zones=[z.id for z in self._zones],
+                    groups=[z.id for z in self._groups],
+                    update=ZoneUpdate(
+                        source=None,
+                    )
+                )
+            )
+        self._is_off = True
 
     async def async_mute_volume(self, mute):
         if mute is None:
@@ -311,7 +335,7 @@ class AmpliPiSource(MediaPlayerEntity):
                     in (SUPPORT_LOOKUP_DICT.keys() & self._source.info.supported_cmds)
                 ]
             )
-        return supported_features
+        return supported_features | DEFAULT_SUPPORTED_COMMANDS
 
     @property
     def media_content_type(self):
@@ -424,7 +448,9 @@ class AmpliPiSource(MediaPlayerEntity):
     @property
     def state(self):
         """Return the state of the zone."""
-        if self._last_update_successful is False:
+        if self._is_off and self._current_stream is None:
+            return STATE_OFF
+        elif self._last_update_successful is False:
             return STATE_UNKNOWN
         elif self._source.info is None or self._source.info.state is None or self._source.info.state == "disconnected":
             return STATE_IDLE
@@ -526,6 +552,7 @@ class AmpliPiZone(MediaPlayerEntity):
                  client: AmpliPi):
         self._current_source = None
         self._sources = sources
+        self._split_group: bool = False
 
         if group:
             self._id = group.id
@@ -556,24 +583,46 @@ class AmpliPiZone(MediaPlayerEntity):
         self._extra_attributes = []
         self._attr_device_class = MediaPlayerDeviceClass.SPEAKER
         self._current_stream = None
+        self._is_off = False
+
+    async def async_toggle(self):
+        if self._is_off:
+            await self.async_turn_on()
+        else:
+            await self.async_turn_off()
+
+    async def async_turn_on(self):
+        # update zone/group to a disconnected but not off state
+        # this allows it to be configured from HA without forcing a specific connection 
+        no_source_update = ZoneUpdate(source_id=-1)
+        if self._group is not None:
+            _LOGGER.info(f"Turning group {self._name} on")
+            await self._update_group(
+                MultiZoneUpdate(
+                    groups=[self._group.id],
+                    update=no_source_update
+                )
+            )
+        else:
+            _LOGGER.info(f"Turning zone {self._name} on")
+            await self._update_zone(no_source_update)
+        self._is_off = False
 
     async def async_turn_off(self):
-        if self._current_source is not None:
-            if self._group is not None:
-                _LOGGER.info(f"Disconnecting zones from source {self._current_source}")
-                await self._update_group(
-                    MultiZoneUpdate(
-                        groups=[self._group.id],
-                        update=ZoneUpdate(
-                            source_id=-1,
-                        )
-                    )
+        # update zone/group to have a disconnected source state that indicates to HA that the zone/group is off
+        source_off_update = ZoneUpdate(source_id=-2)
+        if self._group is None:
+            _LOGGER.info(f"Turning group {self._name} off")
+            await self._update_group(
+                MultiZoneUpdate(
+                    groups=[self._group.id],
+                    update=source_off_update
                 )
-            else:
-                _LOGGER.info(f"Disconnecting zone from source {self._current_source}")
-                await self._update_zone(ZoneUpdate(
-                    source_id=-1,
-                ))
+            )
+        else:
+            _LOGGER.info(f"Turning zone {self._name} off")
+            await self._update_zone(source_off_update)
+        self._is_off = True
 
     async def async_mute_volume(self, mute):
         if mute is None:
@@ -647,7 +696,7 @@ class AmpliPiZone(MediaPlayerEntity):
                     in (SUPPORT_LOOKUP_DICT.keys() & self._current_source.info.supported_cmds)
                 ]
             )
-        return supported_features
+        return supported_features | DEFAULT_SUPPORTED_COMMANDS
 
     @property
     def media_content_type(self):
@@ -703,7 +752,7 @@ class AmpliPiZone(MediaPlayerEntity):
         try:
             state = await self._client.get_status()
             if self._group is not None:
-                group = next(filter(lambda z: z.id == self._id, state.groups), None)
+                group: Group = next(filter(lambda z: z.id == self._id, state.groups), None)
                 if not group:
                     self._last_update_successful = False
                     return
@@ -711,6 +760,12 @@ class AmpliPiZone(MediaPlayerEntity):
 
                 if any_enabled_zone is not None:
                     enabled = True
+                
+                related_zones = []
+                for zone_index in group.zones:
+                    related_zones.append(state.zones[zone_index].source_id)
+                # Is every zone connected to the same source?
+                self._split_group = len(set(related_zones)) == 1
             else:
                 zone = next(filter(lambda z: z.id == self._id, state.zones), None)
                 if not zone:
@@ -738,10 +793,14 @@ class AmpliPiZone(MediaPlayerEntity):
         info = None
         self._current_source = None
 
+        # When a zone is off it connects to source_id -2, groups also yield the source_id that all requisite zones are already connected to
         if self._group is not None:
             self._current_source = next(filter(lambda s: self._group.source_id == s.id, sources), None)
+            self._is_off = self._group.source_id == -2
+                
         elif self._zone.source_id is not None:
             self._current_source = next(filter(lambda s: self._zone.source_id == s.id, sources), None)
+            self._is_off = self._zone.source_id == -2
 
         if self._current_source is not None:
             info = self._current_source.info
@@ -767,8 +826,10 @@ class AmpliPiZone(MediaPlayerEntity):
 
     @property
     def state(self):
-        """Return the state of the zone."""
-        if self._last_update_successful is False:
+        """Return the state of the zone.""" 
+        if self._is_off and self._current_source is None:
+            return STATE_OFF
+        elif self._last_update_successful is False or self._split_group:
             return STATE_UNKNOWN
         elif self._current_source is None or self._current_source == -1 or self._current_source.info is None or self._current_source.info.state is None:
             return STATE_IDLE
