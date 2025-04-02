@@ -7,7 +7,7 @@ from functools import reduce
 from typing import List, Optional
 
 import validators
-from homeassistant.components import media_source
+from homeassistant.components import media_source, persistent_notification
 from homeassistant.components.media_player import MediaPlayerDeviceClass, MediaPlayerEntity, MediaPlayerEntityFeature, MediaType
 from homeassistant.components.media_player.browse_media import (
     async_process_play_media_url,
@@ -82,10 +82,6 @@ def build_url(api_base_path, img_url):
         return new_url
 
     return None
-
-async def create_notification(hass, message: str, title: str, notification_id: str):
-    """Creates a persistent notification in the home assistant frontent"""
-    hass.components.persistent_notification.create(message, title=title, notification_id=notification_id)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the AmpliPi MultiZone Audio Controller"""
@@ -1197,7 +1193,6 @@ class AmpliPiStream(MediaPlayerEntity):
         ]
         self._available = False
         self._extra_attributes = []
-        self._is_off = False
 
     async def _update_source(self, source_id, update: SourceUpdate):
         await self._client.set_source(source_id, update)
@@ -1211,7 +1206,7 @@ class AmpliPiStream(MediaPlayerEntity):
             await self.async_update()
 
     async def async_toggle(self):
-        if self._is_off:
+        if self._current_source is None:
             await self.async_turn_on()
         else:
             await self.async_turn_off()
@@ -1219,7 +1214,6 @@ class AmpliPiStream(MediaPlayerEntity):
     async def async_turn_on(self):
         if self._current_source is None:
             await self.async_connect_source()
-        self._is_off = False
 
     async def async_turn_off(self):
         if self._current_source is not None:
@@ -1230,7 +1224,6 @@ class AmpliPiStream(MediaPlayerEntity):
                     input='None'
                 )
             )
-        self._is_off = True
 
     async def async_mute_volume(self, mute):
         if mute is None:
@@ -1389,7 +1382,7 @@ class AmpliPiStream(MediaPlayerEntity):
     @property
     def state(self):
         """Return the state of the stream."""
-        if self._is_off:
+        if self._current_source is None:
             return STATE_OFF
         elif self._last_update_successful is False:
             return STATE_UNKNOWN
@@ -1459,6 +1452,9 @@ class AmpliPiStream(MediaPlayerEntity):
     
     async def async_connect_zones(self, zones: Optional[List[int]], groups: Optional[List[int]]):
         """Connects zones and/or groups to the current source"""
+        if self._current_source is None:
+            await self.async_turn_on()
+        
         if self._current_source is not None:
             await self._client.set_zones(
                 MultiZoneUpdate(
@@ -1582,7 +1578,8 @@ class AmpliPiStream(MediaPlayerEntity):
             if source.input in ['', 'None', None]:
                 return source
         
-        await create_notification(self.hass, f"Stream {self._name} could not find an available source to connect to, all sources in use.\n\nPlease disconnect a source or provide one to override and try again.", f"Stream {self._name} could not connect", f"{self._id}_connection_error")
+        
+        persistent_notification.create(self.hass, f"Stream {self._name} could not find an available source to connect to, all sources in use.\n\nPlease disconnect a source or provide one to override and try again.", f"{self._name} could not connect", f"{self._id}_connection_error")
         if ignore_errors:
             return None
         raise Exception("Not attached to a source and all sources are in use. Disconnect a source or select one to override and try again.")
