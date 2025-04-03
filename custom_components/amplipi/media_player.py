@@ -45,7 +45,7 @@ SUPPORT_AMPLIPI_ANNOUNCE = (
         | MediaPlayerEntityFeature.VOLUME_SET
 )
 
-SOURCE_SUPPORT_LOOKUP_DICT = {
+SUPPORT_LOOKUP_DICT = {
     'play': MediaPlayerEntityFeature.PLAY,
     'pause': MediaPlayerEntityFeature.PAUSE,
     'stop': MediaPlayerEntityFeature.STOP,
@@ -532,7 +532,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             return
 
         if self._source is not None:
-            _LOGGER.info(f"setting mute to {mute}")
+            _LOGGER.warning(f"setting mute to {mute}")
             await self._update_zones(
                 MultiZoneUpdate(
                     zones=[z.id for z in self._zones],
@@ -546,7 +546,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
     async def async_set_volume_level(self, volume):
         if volume is None:
             return
-        _LOGGER.info(f"setting volume to {volume}")
+        _LOGGER.warning(f"setting volume to {volume}")
         
         group = next(filter(lambda z: z.vol_f is not None, self._groups), None)
         zone = next(filter(lambda z: z.vol_f is not None, self._zones), None)
@@ -645,11 +645,11 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             supported_features = supported_features | reduce(
                 operator.or_,
                 [
-                    SOURCE_SUPPORT_LOOKUP_DICT.get(key) for key
-                    in (SOURCE_SUPPORT_LOOKUP_DICT.keys() & self._source.info.supported_cmds)
+                    SUPPORT_LOOKUP_DICT.get(key) for key
+                    in (SUPPORT_LOOKUP_DICT.keys() & self._source.info.supported_cmds)
                 ]
             )
-        return supported_features | DEFAULT_SUPPORTED_COMMANDS
+        return supported_features
 
     @property
     def media_content_type(self):
@@ -885,17 +885,6 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             'Source 4',
         ]
         self._attr_device_class = MediaPlayerDeviceClass.SPEAKER
-        self._current_stream = None
-        self._is_off = False
-
-    async def async_toggle(self):
-        if self._is_off:
-            await self.async_turn_on()
-        else:
-            await self.async_turn_off()
-
-    async def async_turn_on(self):
-        self._is_off = False
 
     def get_original_name(self):
         """
@@ -994,11 +983,11 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             supported_features = supported_features | reduce(
                 operator.or_,
                 [
-                    ZONE_SUPPORT_LOOKUP_DICT.get(key) for key
-                    in (ZONE_SUPPORT_LOOKUP_DICT.keys() & self._current_source.info.supported_cmds)
+                    SUPPORT_LOOKUP_DICT.get(key) for key
+                    in (SUPPORT_LOOKUP_DICT.keys() & self._current_source.info.supported_cmds)
                 ]
             )
-        return supported_features | DEFAULT_SUPPORTED_COMMANDS
+        return supported_features
 
     @property
     def media_content_type(self):
@@ -1194,6 +1183,11 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         await self.async_update()
 
     @property
+    def entity_registry_enabled_default(self):
+        """Return if the entity should be enabled when first added to the entity registry."""
+        return True
+
+    @property
     def source_list(self):
         """List of available input sources."""
         return self._attr_source_list
@@ -1311,7 +1305,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
     @property
     def media_content_type(self):
         """Content type of current playing media."""
-        return MediaType.TRACK
+        return MediaType.MUSIC
     
     @property
     def entity_registry_enabled_default(self):
@@ -1506,8 +1500,8 @@ class AmpliPiStream(MediaPlayerEntity):
             supported_features = supported_features | reduce(
                 operator.or_,
                 [
-                    STREAM_SUPPORT_LOOKUP_DICT.get(key) for key
-                    in (STREAM_SUPPORT_LOOKUP_DICT.keys() & self._current_source.info.supported_cmds)
+                    SUPPORT_LOOKUP_DICT.get(key) for key
+                    in (STRESUPPORT_LOOKUP_DICT.keys() & self._current_source.info.supported_cmds)
                 ]
             )
         return supported_features | DEFAULT_SUPPORTED_COMMANDS
