@@ -1352,7 +1352,7 @@ class AmpliPiStream(MediaPlayerEntity):
 
         self._id = stream.id
         self._name = stream.name
-        self._unique_id = stream.name
+        self._unique_id = f"{namespace}_stream_{stream.name}"
         
         self._image_base_path = image_base_path
         self._vendor = vendor
@@ -1620,9 +1620,12 @@ class AmpliPiStream(MediaPlayerEntity):
         group_ids: List[int] = []
         if source:
             state = await self._client.get_status()
-            amplipi_source = next(filter(lambda s: source in s.name, state.sources), None)
-            zone_ids = [z.id for z in state.zones if z.name == source]
-            group_ids = [g.id for g in state.groups if g.name == source]
+            # The following regex removes "media_player.amplipi_{word}_" from the given source and then replace the underscores with spaces, functionally converting the entity IDs to the names while leaving names unnaffected
+            process_name = lambda s: re.sub(r"media_player\.amplipi_[^_]+_", "", s).replace("_", " ").lower()
+            source = process_name(source)
+            amplipi_source = next(filter(lambda s: source == process_name(s.name), state.sources), None)
+            zone_ids = [z.id for z in state.zones if source == process_name(z.name)]
+            group_ids = [g.id for g in state.groups if source == process_name(g.name)]
 
         if len(zone_ids) > 0 or len(group_ids) > 0:
             await self.async_connect_zones(zone_ids, group_ids)
@@ -1689,6 +1692,7 @@ class AmpliPiStream(MediaPlayerEntity):
             self._current_source = next((s for s in self._sources if s.id == source_id), self._current_source)
         else:
             available_source = await self.find_source()
+            self._current_source = available_source
             source_id = available_source.id
             
         await self._update_source(
@@ -1697,7 +1701,6 @@ class AmpliPiStream(MediaPlayerEntity):
                 input=f'stream={self._id}'
             )
         )
-        await self.async_update()
 
     @property
     def source_list(self):
