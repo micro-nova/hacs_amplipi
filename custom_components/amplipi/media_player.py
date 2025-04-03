@@ -1278,8 +1278,8 @@ class AmpliPiStream(MediaPlayerEntity):
             supported_features = supported_features | reduce(
                 operator.or_,
                 [
-                    SUPPORT_LOOKUP_DICT.get(key) for key
-                    in (STRESUPPORT_LOOKUP_DICT.keys() & self._current_source.info.supported_cmds)
+                    STREAM_SUPPORT_LOOKUP_DICT.get(key) for key
+                    in (STREAM_SUPPORT_LOOKUP_DICT.keys() & self._current_source.info.supported_cmds)
                 ]
             )
         return supported_features | DEFAULT_SUPPORTED_COMMANDS
