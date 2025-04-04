@@ -1194,6 +1194,7 @@ class AmpliPiStream(MediaPlayerEntity):
         ]
         self._available = False
         self._extra_attributes = []
+        self._is_off = False
 
     async def _update_source(self, source_id, update: SourceUpdate):
         await self._client.set_source(source_id, update)
@@ -1207,17 +1208,17 @@ class AmpliPiStream(MediaPlayerEntity):
             await self.async_update()
 
     async def async_toggle(self):
-        if self._current_source is None:
+        if self._is_off:
             await self.async_turn_on()
         else:
             await self.async_turn_off()
 
     async def async_turn_on(self):
-        if self._current_source is None:
-            await self.async_connect_source()
+        if self._is_off:
+            self._is_off = False
 
     async def async_turn_off(self):
-        if self._current_source is not None:
+        if not self._is_off:
             _LOGGER.info(f"Disconnecting stream from source {self._current_source}")
             await self._update_source(
                 self._current_source.id,
@@ -1225,6 +1226,7 @@ class AmpliPiStream(MediaPlayerEntity):
                     input='None'
                 )
             )
+            self._is_off = True
 
     async def async_mute_volume(self, mute):
         if mute is None:
@@ -1383,7 +1385,7 @@ class AmpliPiStream(MediaPlayerEntity):
     @property
     def state(self):
         """Return the state of the stream."""
-        if self._current_source is None:
+        if self._is_off or self._current_source is None:
             return STATE_OFF
         elif self._last_update_successful is False:
             return STATE_UNKNOWN
@@ -1457,7 +1459,7 @@ class AmpliPiStream(MediaPlayerEntity):
     async def async_connect_zones(self, zones: Optional[List[int]], groups: Optional[List[int]]):
         """Connects zones and/or groups to the current source"""
         if self._current_source is None:
-            await self.async_turn_on()
+            await self.async_connect_source()
         
         if self._current_source is not None:
             await self._client.set_zones(
