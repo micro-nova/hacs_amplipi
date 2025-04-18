@@ -144,14 +144,14 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
     def encode_stream_names(self, streams: Union[Stream, List[Stream]]) -> Union[Stream, List[Stream]]:
         """Processes one or more stream names to include 'AmpliPi Stream {stream.id}: {stream.name}'"""
         def encode_name(stream: Stream):
+            # Need to check if name was already processed so you don't get stuff like:
+            # "AmpliPi 996: AmpliPi 996: AmpliPi 996: Input 1" due to back population
             if f"AmpliPi {stream.id}:" not in stream.name:
                 stream.name = f"AmpliPi {stream.id}: {stream.name}"
             return stream
         
         if isinstance(streams, List):
             for stream in streams:
-                # Need to check if name was already processed so you don't get stuff like:
-                # "AmpliPi 996: AmpliPi 996: AmpliPi 996: Input 1" due to back population
                 stream = encode_name(stream)
             return streams
         else:
@@ -1174,7 +1174,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                  sources: List[Source],
                  vendor: str, version: str, image_base_path: str,
                  client: AmpliPi):
-        self._stream = self.encode_stream_names(stream)
+        self._stream: Stream = self.encode_stream_names(stream)
         self._current_stream = self._stream
         self._current_source = None
         self._current_zones: List[Zone] = []
@@ -1454,6 +1454,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
 
     async def async_connect_source(self, source: Optional[Source] = None):
         """Connects the stream to a source. If a source is not provided, searches for an available source."""
+        _LOGGER.warning(f"Stream {self._name} attempting to connect to source {source}")
         source_id = None
         if self._stream.type == "rca":
             # RCAs are hardware constrained to only being able to use one specific source
