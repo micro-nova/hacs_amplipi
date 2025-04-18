@@ -1328,7 +1328,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                  sources: List[Source],
                  vendor: str, version: str, image_base_path: str,
                  client: AmpliPi):
-        self._stream = self.encode_stream_names(stream)
+        self._stream: Stream = self.encode_stream_names(stream)
         self._current_stream = self._stream
         self._current_source = None
         self._current_zones: List[Zone] = []
@@ -1597,6 +1597,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
 
     async def async_connect_source(self, source: Optional[Source] = None):
         """Connects the stream to a source. If a source is not provided, searches for an available source."""
+        _LOGGER.warning(f"Stream {self._name} attempting to connect to source {source}")
         source_id = None
         if self._stream.type == "rca":
             # RCAs are hardware constrained to only being able to use one specific source
