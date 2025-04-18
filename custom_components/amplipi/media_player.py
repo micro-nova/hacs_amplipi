@@ -288,6 +288,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
                     input=f'stream={stream.id}'
                 )
             )
+            
             return source_id
     
     async def async_connect_zones_to_source(self, source: Source, zones: Optional[List[int]], groups: Optional[List[int]]):
@@ -412,22 +413,27 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     async def async_media_play(self):
         if self._current_stream is not None:
             await self._client.play_stream(self._current_stream.id)
+        
 
     async def async_media_stop(self):
         if self._current_stream is not None:
             await self._client.stop_stream(self._current_stream.id)
+        
 
     async def async_media_pause(self):
         if self._current_stream is not None:
             await self._client.pause_stream(self._current_stream.id)
+        
 
     async def async_media_previous_track(self):
         if self._current_stream is not None:
             await self._client.previous_stream(self._current_stream.id)
+        
 
     async def async_media_next_track(self):
         if self._current_stream is not None:
             await self._client.next_stream(self._current_stream.id)
+        
 
     @property
     def available(self):
@@ -528,6 +534,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
                 )
             )
             self._is_off = True
+            
 
     async def async_mute_volume(self, mute):
         if mute is None:
@@ -627,6 +634,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             else:
                 _LOGGER.warning(f'Select Source {source} called but a match could not be found in the stream cache, '
                                 f'{self._streams}')
+        
 
     def clear_playlist(self):
         pass
@@ -816,17 +824,20 @@ class AmpliPiSource(AmpliPiMediaPlayer):
 
     async def _update_source(self, update: SourceUpdate):
         await self._client.set_source(self._source.id, update)
+        
 
     async def _update_zones(self, update: MultiZoneUpdate):
         # zones = await self._client.get_zones()
         # associated_zones = filter(lambda z: z.source_id == self._source.id, zones)
         await self._client.set_zones(update)
+        
 
     async def _update_groups(self, update: GroupUpdate):
         groups = await self._client.get_groups()
         associated_groups = filter(lambda g: g.source_id == self._source.id, groups)
         for group in associated_groups:
             await self._client.set_group(group.id, update)
+        
 
     @property
     def extra_state_attributes(self):
@@ -1190,9 +1201,11 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
     async def _update_zone(self, update: ZoneUpdate):
         await self._client.set_zone(self._id, update)
+        
 
     async def _update_group(self, update: MultiZoneUpdate):
         await self._client.set_zones(update)
+        
 
     @property
     def source_list(self):
