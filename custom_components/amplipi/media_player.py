@@ -1570,6 +1570,9 @@ class AmpliPiStream(AmpliPiMediaPlayer):
 
 
     async def async_select_source(self, source: Optional[str] = None):
+        # This is a home assistant MediaPlayer built-in function, so the source being passed in isn't the same as an amplipi source
+        # the argument "source" can either be the name or entity_id of a zone, group, or amplipi source
+        # As such, this info must be sorted and then sent down the proper logical path
         if source:
             source = await self.get_entity(source)
             if isinstance(source, Zone):
