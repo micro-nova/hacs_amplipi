@@ -150,12 +150,13 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
 
     async def extract_stream_id(self, stream: str):
         """Pulls the stream.id out of a stream entity's name or entity_id"""
-        processed = ''.join(re.findall(r'\d', stream))
-        # Only return first n digits in case there's a stream name with numbers in it
-        if int(processed[0]) == 1:
-            return processed[:4]
-        if int(processed[0]) == 9:
-            return processed[:3]
+        # Example stream entity id: media_player.amplipi_1000_groove_salad
+        # Example stream name: Amplipi 1000: Groove Salad
+        match = re.search(r"\d+", stream) # Find first uninterrupted substring of digits
+        if match:
+            output = match.group()
+            if int(output) > 995: # all stream ids are above 995
+                return output
         _LOGGER.error("extract_stream_id could not determine stream ID")
 
     def extract_source_id_from_name(self, source: str):
@@ -1443,15 +1444,13 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     def volume_level(self):
         """Volume level of the media player (0..1)."""
         if self._current_source is not None:
-
-            group = next(filter(lambda g: g.vol_f is not None, self._current_groups), None)
-            if group is not None:
-                return group.vol_f
-
-            zone = next(filter(lambda z: z.vol_f is not None, self._current_zones), None)
-            if zone is not None:
-                return zone.vol_f
-            
+            i = 0
+            vol = 0
+            for item in self._current_groups and self._current_zones:
+                vol += item.vol_f
+                i += 1
+            if i > 0:
+                return vol / i
         return None
 
     @property
