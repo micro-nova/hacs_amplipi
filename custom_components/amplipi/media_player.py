@@ -1474,13 +1474,21 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         # the argument "source" can either be the name or entity_id of a zone, group, or amplipi source
         # As such, this info must be sorted and then sent down the proper logical path
         if source:
-            source = await self.get_entity(source)
-            if isinstance(source, Zone):
-                await self.async_connect_zones([source.id], None)
-            elif isinstance(source, Group):
-                await self.async_connect_zones(None, [source.id])
-            elif isinstance(source, Source):
-                await self.async_connect_source(source)
+            if source == "None":
+                await self._client.set_source(
+                    self._current_source.id,
+                    SourceUpdate(
+                        input='None'
+                    )
+                )
+            else:
+                source = await self.get_entity(source)
+                if isinstance(source, Zone):
+                    await self.async_connect_zones([source.id], None)
+                elif isinstance(source, Group):
+                    await self.async_connect_zones(None, [source.id])
+                elif isinstance(source, Source):
+                    await self.async_connect_source(source)
         else:
             await self.async_connect_source()
 
