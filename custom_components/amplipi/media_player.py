@@ -1244,7 +1244,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             'Source 2',
             'Source 3',
             'Source 4',
-        ] if self._stream.type != "rca" else [f'Source {self._stream.id - 995}']
+        ] if self._stream.type != "rca" else ['None', f'Source {self._stream.id - 995}']
         self._available = False
         self._extra_attributes = []
         self._is_off: bool = True
