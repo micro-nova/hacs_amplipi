@@ -1248,7 +1248,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             'Source 2',
             'Source 3',
             'Source 4',
-        ] if self._stream.type != "rca" else [f'Source {self._stream.id - 995}']
+        ] if self._stream.type != "rca" else ['None', f'Source {self._stream.id - 995}']
         self._available = False
         self._extra_attributes = []
         self._is_off: bool = True
@@ -1478,14 +1478,21 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         # the argument "source" can either be the name or entity_id of a zone, group, or amplipi source
         # As such, this info must be sorted and then sent down the proper logical path
         if source:
-            _LOGGER.warning(f"source: {source}")
-            source = await self.get_entity(source)
-            if isinstance(source, Zone):
-                await self.async_connect_zones([source.id], None)
-            elif isinstance(source, Group):
-                await self.async_connect_zones(None, [source.id])
-            elif isinstance(source, Source):
-                await self.async_connect_source(source)
+            if source == "None":
+                await self._client.set_source(
+                    self._current_source.id,
+                    SourceUpdate(
+                        input='None'
+                    )
+                )
+            else:
+                source = await self.get_entity(source)
+                if isinstance(source, Zone):
+                    await self.async_connect_zones([source.id], None)
+                elif isinstance(source, Group):
+                    await self.async_connect_zones(None, [source.id])
+                elif isinstance(source, Source):
+                    await self.async_connect_source(source)
         else:
             await self.async_connect_source()
 
@@ -1537,7 +1544,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                 raise Exception("All sources are in use, disconnect a source or select one to override and try again.")
             
         if source_id is not None:
-            _LOGGER.warning(f"source_id: {source_id}")
+            _LOGGER.info(f"source_id: {source_id}")
             await self._client.set_source(
                 source_id,
                 SourceUpdate(
