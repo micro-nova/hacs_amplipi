@@ -1,0 +1,59 @@
+blueprint:
+  name: "AmpliPi Start Streaming"
+  description: "Connect a Source to a Stream and assign Zone(s) to the Source.\nAfter filling out these sections, hit the three dots in the top right and hit 'Take Control' to set the triggers of the automation"
+  domain: automation
+
+  input:
+    source:
+      name: "Source"
+      description: "Select the source\nOptional, used to ensure the automation still works when all 4 sources are in use via overriding a connected stream"
+      default: "None"
+      selector:
+        entity:
+          filter:
+            - device_class: receiver
+            - integration: AmpliPi
+
+    stream:
+      name: "Stream"
+      description: "Select the audio stream"
+      selector:
+        entity:
+          filter:
+            # "stream" is not a real media player device class, but that doesn't stop me from yielding "stream" from that property in AmpliPiStream
+            - device_class: "stream"
+            - integration: AmpliPi
+
+    zones:
+      name: "Zones"
+      description: "Select one or more zones/groups for audio output"
+      selector:
+        entity:
+          filter:
+            - device_class: speaker
+            - integration: AmpliPi
+          multiple: true
+
+mode: single
+
+action:
+  - service: media_player.select_source
+    target:
+      entity_id: !input stream
+    data:
+      source: !input source
+
+  - repeat:
+      for_each: !input zones
+      sequence:
+        - service: media_player.select_source
+          target:
+            entity_id: !input stream
+          data:
+            source: "{{ repeat.item }}"
+
+        - service: media_player.volume_mute
+          target:
+            entity_id: "{{ repeat.item }}"
+          data:
+            is_volume_muted: false
