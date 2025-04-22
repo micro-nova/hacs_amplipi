@@ -1243,6 +1243,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         # not a real device class, but allows us to match streams and only streams with the start_streaming blueprint's streams dropdown
         self._attr_device_class = "stream"
         self._attr_source_list = [
+            'None',
             'Source 1',
             'Source 2',
             'Source 3',
@@ -1553,11 +1554,9 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     @property
     def source(self):
         """Returns the current source playing, if this is wrong it won't show up as the selected source on HomeAssistant"""
-        if self._current_source is not None:
-            if self._current_source == "None":
-                return "None"
-            return f'Source {self._current_source.id + 1}'
-        return None
+        if self._current_source in [None, "None"]:
+            return "None"
+        return f'Source {self._current_source.id + 1}'
 
     @property
     def extra_state_attributes(self):
