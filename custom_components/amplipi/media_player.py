@@ -37,15 +37,7 @@ SUPPORT_AMPLIPI_ANNOUNCE = (
         | MediaPlayerEntityFeature.VOLUME_SET
 )
 
-SOURCE_SUPPORT_LOOKUP_DICT = {
-    'play': MediaPlayerEntityFeature.PLAY,
-    'pause': MediaPlayerEntityFeature.PAUSE,
-    'stop': MediaPlayerEntityFeature.STOP,
-    'next': MediaPlayerEntityFeature.NEXT_TRACK,
-    'prev': MediaPlayerEntityFeature.PREVIOUS_TRACK,
-}
-
-ZONE_SUPPORT_LOOKUP_DICT = {
+SUPPORT_LOOKUP_DICT = {
     'play': MediaPlayerEntityFeature.PLAY,
     'pause': MediaPlayerEntityFeature.PAUSE,
     'stop': MediaPlayerEntityFeature.STOP,
@@ -306,8 +298,8 @@ class AmpliPiSource(MediaPlayerEntity):
             supported_features = supported_features | reduce(
                 operator.or_,
                 [
-                    SOURCE_SUPPORT_LOOKUP_DICT.get(key) for key
-                    in (SOURCE_SUPPORT_LOOKUP_DICT.keys() & self._source.info.supported_cmds)
+                    SUPPORT_LOOKUP_DICT.get(key) for key
+                    in (SUPPORT_LOOKUP_DICT.keys() & self._source.info.supported_cmds)
                 ]
             )
         return supported_features
@@ -648,8 +640,8 @@ class AmpliPiZone(MediaPlayerEntity):
             supported_features = supported_features | reduce(
                 operator.or_,
                 [
-                    ZONE_SUPPORT_LOOKUP_DICT.get(key) for key
-                    in (ZONE_SUPPORT_LOOKUP_DICT.keys() & self._current_source.info.supported_cmds)
+                    SUPPORT_LOOKUP_DICT.get(key) for key
+                    in (SUPPORT_LOOKUP_DICT.keys() & self._current_source.info.supported_cmds)
                 ]
             )
         return supported_features
@@ -815,25 +807,35 @@ class AmpliPiZone(MediaPlayerEntity):
             return self._zone.mute
 
     async def async_select_source(self, source):
-        source_id = int(source.split(' ')[1]) - 1
-        self._current_source = source
-        if source_id is not None:
-            if self._is_group:
-                await self._update_group(
-                    MultiZoneUpdate(
-                        groups=[self._group.id],
-                        update=ZoneUpdate(
+        if source == 'None':
+            await self._update_group(
+                MultiZoneUpdate(
+                    groups=[self._group.id],
+                    update=ZoneUpdate(
+                        source_id=-1
+                    )
+                )
+            )
+        else:
+            source_id = int(source.split(' ')[1]) - 1
+            self._current_source = source
+            if source_id is not None:
+                if self._is_group:
+                    await self._update_group(
+                        MultiZoneUpdate(
+                            groups=[self._group.id],
+                            update=ZoneUpdate(
+                                source_id=source_id
+                            )
+                        )
+                    )
+                else:
+                    await self._update_zone(
+                        ZoneUpdate(
                             source_id=source_id
                         )
                     )
-                )
-            else:
-                await self._update_zone(
-                    ZoneUpdate(
-                        source_id=source_id
-                    )
-                )
-            await self.async_update()
+                await self.async_update()
 
     async def _update_zone(self, update: ZoneUpdate):
         await self._client.set_zone(self._id, update)
@@ -846,7 +848,7 @@ class AmpliPiZone(MediaPlayerEntity):
     @property
     def source_list(self):
         """List of available input sources."""
-        source_list = []
+        source_list = ["None"]
         source_num = 1
         if self._sources is not None:
             for _ in self._sources:
