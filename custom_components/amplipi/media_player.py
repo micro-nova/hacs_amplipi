@@ -544,6 +544,7 @@ class AmpliPiZone(MediaPlayerEntity):
         self._client = client
         self._last_update_successful = False
         self._attr_source_list = [
+            'None',
             'Source 1',
             'Source 2',
             'Source 3',
@@ -808,16 +809,24 @@ class AmpliPiZone(MediaPlayerEntity):
 
     async def async_select_source(self, source):
         if source == 'None':
-            await self._update_group(
-                MultiZoneUpdate(
-                    groups=[self._group.id],
-                    update=ZoneUpdate(
+            if self._is_group:
+                await self._update_group(
+                    MultiZoneUpdate(
+                        groups=[self._group.id],
+                        update=ZoneUpdate(
+                            source_id=-1
+                        )
+                    )
+                )
+            else:
+                await self._update_zone(
+                    ZoneUpdate(
                         source_id=-1
                     )
                 )
-            )
+            self._current_source = None
         else:
-            source_id = int(source.split(' ')[1]) - 1
+            source_id = self.extract_source_id_from_name(source)
             self._current_source = source
             if source_id is not None:
                 if self._is_group:
@@ -835,7 +844,7 @@ class AmpliPiZone(MediaPlayerEntity):
                             source_id=source_id
                         )
                     )
-                await self.async_update()
+        await self.async_update()
 
     async def _update_zone(self, update: ZoneUpdate):
         await self._client.set_zone(self._id, update)
@@ -848,22 +857,14 @@ class AmpliPiZone(MediaPlayerEntity):
     @property
     def source_list(self):
         """List of available input sources."""
-        source_list = ["None"]
-        source_num = 1
-        if self._sources is not None:
-            for _ in self._sources:
-                source_list.append("Source " + str(source_num))
-                source_num += 1
-        return source_list
+        return self._attr_source_list
 
     @property
     def source(self):
         """Returns the current source playing, if this is wrong it won't show up as the selected source on HomeAssistant"""
-        if self._current_source is not None:
-            if self._current_source == "None":
-                return "None"
-            return f'Source {self._current_source.id + 1}'
-        return None
+        if self._current_source in [None, "None"]:
+            return "None"
+        return f'Source {self._current_source.id + 1}'
 
     async def async_browse_media(self, media_content_type=None, media_content_id=None):
         """Implement the websocket media browsing helper."""
