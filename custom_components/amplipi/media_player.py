@@ -707,6 +707,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         self._enabled = False
         self._client = client
         self._attr_source_list = [
+            'None',
             'Source 1',
             'Source 2',
             'Source 3',
@@ -982,27 +983,43 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             return self._zone.mute
 
     async def async_select_source(self, source):
-        # source can either be the name of a source or the source's entity ID depending on if this function was called from an automation or directly from the dropdown
-        # Either way, it will contain the ID number in it, use a regex to only return digits and then only use the first one in case we ever allow users to name their sources
-        source_id = self.extract_source_id_from_name(source)
-        self._current_source = source
-        if source_id is not None:
+        if source == 'None':
             if self._is_group:
                 await self._update_group(
                     MultiZoneUpdate(
                         groups=[self._group.id],
                         update=ZoneUpdate(
-                            source_id=source_id
+                            source_id=-1
                         )
                     )
                 )
             else:
                 await self._update_zone(
                     ZoneUpdate(
-                        source_id=source_id
+                        source_id=-1
                     )
                 )
-            await self.async_update()
+            self._current_source = None
+        else:
+            source_id = self.extract_source_id_from_name(source)
+            self._current_source = source
+            if source_id is not None:
+                if self._is_group:
+                    await self._update_group(
+                        MultiZoneUpdate(
+                            groups=[self._group.id],
+                            update=ZoneUpdate(
+                                source_id=source_id
+                            )
+                        )
+                    )
+                else:
+                    await self._update_zone(
+                        ZoneUpdate(
+                            source_id=source_id
+                        )
+                    )
+        await self.async_update()
 
     async def _update_zone(self, update: ZoneUpdate):
         await self._client.set_zone(self._id, update)
@@ -1020,11 +1037,9 @@ class AmpliPiZone(AmpliPiMediaPlayer):
     @property
     def source(self):
         """Returns the current source playing, if this is wrong it won't show up as the selected source on HomeAssistant"""
-        if self._current_source is not None:
-            if self._current_source == "None":
-                return "None"
-            return f'Source {self._current_source.id + 1}'
-        return None
+        if self._current_source in [None, "None"]:
+            return "None"
+        return f'Source {self._current_source.id + 1}'
 
     async def async_browse_media(self, media_content_type=None, media_content_id=None):
         """Implement the websocket media browsing helper."""
