@@ -333,20 +333,16 @@ class AmpliPiSource(AmpliPiMediaPlayer):
 
     async def async_turn_off(self):
         if self._source is not None:
-            _LOGGER.info(f"Disconnecting zones from source {self._current_source}")
+            await self._update_source(SourceUpdate(
+                input='None'
+            ))
             await self._update_zones(
                 MultiZoneUpdate(
                     zones=[z.id for z in self._zones],
                     groups=[z.id for z in self._groups],
                     update=ZoneUpdate(
-                        source_id=-1,
+                        source=None,
                     )
-                )
-            )
-            await self._client.set_source(
-                self._id,
-                SourceUpdate(
-                    input='None'
                 )
             )
         self._is_off = True
@@ -641,6 +637,10 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             selectable_rca = RCAs[self._id]
             streams += [stream.name for stream in self._streams if stream.id not in RCAs or stream.id == selectable_rca]
         return streams
+
+    async def _update_source(self, update: SourceUpdate):
+        await self._client.set_source(self._source.id, update)
+        await self.async_update()
 
     async def _update_zones(self, update: MultiZoneUpdate):
         # zones = await self._client.get_zones()
