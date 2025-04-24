@@ -167,7 +167,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
             output = match.group()
             if int(output) > 995: # all stream ids are above 995
                 return output
-        _LOGGER.error("extract_stream_id could not determine stream ID")
+        _LOGGER.error(f"extract_stream_id could not determine stream ID from: {stream}")
 
     def extract_source_id_from_name(self, source: str):
         return int(''.join(re.findall(r'\d', source))[0]) - 1
@@ -317,7 +317,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         self._vendor = vendor
         self._version = version
         self._source = source
-        self._current_source = self._source
+        self._current_source = self._source # Create a symlink for inherited functions while still keeping more sensible local verbiage
         self._client = client
         self._unique_id = f"{namespace}_source_{source.id}"
         self._attr_device_class = MediaPlayerDeviceClass.RECEIVER
@@ -333,14 +333,20 @@ class AmpliPiSource(AmpliPiMediaPlayer):
 
     async def async_turn_off(self):
         if self._source is not None:
-            _LOGGER.info(f"disconnecting stream from source {self._name}")
+            _LOGGER.info(f"Disconnecting zones from source {self._current_source}")
             await self._update_zones(
                 MultiZoneUpdate(
                     zones=[z.id for z in self._zones],
                     groups=[z.id for z in self._groups],
                     update=ZoneUpdate(
-                        source=None,
+                        source_id=-1,
                     )
+                )
+            )
+            await self._client.set_source(
+                self._id,
+                SourceUpdate(
+                    input='None'
                 )
             )
         self._is_off = True
@@ -661,24 +667,6 @@ class AmpliPiZone(AmpliPiMediaPlayer):
     """Representation of an AmpliPi Zone and/or Group. Supports Audio volume
         and mute controls and the ability to change the current 'source' a
         zone is tied to"""
-
-    async def async_turn_on(self):
-        if self._is_group:
-            await self._update_group(
-                MultiZoneUpdate(
-                    groups=[self._group.id],
-                    update=ZoneUpdate(
-                        disabled=False,
-                    )
-                )
-            )
-        else:
-            await self._update_zone(
-                ZoneUpdate(
-                    disabled=False,
-                )
-            )
-        #self.is_on = True
 
     def __init__(self, namespace: str, zone, group,
                  streams: List[Stream], sources: List[Source],
@@ -1226,7 +1214,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                  vendor: str, version: str, image_base_path: str,
                  client: AmpliPi):
         self._stream: Stream = self.encode_stream_names(stream)
-        self._current_stream = self._stream
+        self._current_stream = self._stream # Make a symlink for use with inherited functions while keeping local verbiage more correct
         self._current_source = None
         self._current_zones: List[Zone] = []
         self._current_groups: List[Group] = []
@@ -1478,7 +1466,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         # the argument "source" can either be the name or entity_id of a zone, group, or amplipi source
         # As such, this info must be sorted and then sent down the proper logical path
         if source:
-            if source == "None":
+            if source == "None" and self._current_source is not None:
                 await self._client.set_source(
                     self._current_source.id,
                     SourceUpdate(
