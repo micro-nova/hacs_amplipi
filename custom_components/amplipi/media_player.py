@@ -417,7 +417,7 @@ class AmpliPiSource(MediaPlayerEntity):
         """Return the state of the zone."""
         if self._last_update_successful is False:
             return STATE_UNKNOWN
-        elif self._source.info is None or self._source.info.state is None:
+        elif self._source.info is None or self._source.info.state is None or self._source.info.state == "disconnected":
             return STATE_IDLE
         elif self._source.info.state in (
                 'paused'
