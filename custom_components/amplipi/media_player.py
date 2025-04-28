@@ -1249,6 +1249,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         self._attr_device_class = "stream"
         self._attr_source_list = [
             'None',
+            'Any',
             'Source 1',
             'Source 2',
             'Source 3',
@@ -1490,6 +1491,8 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                         input='None'
                     )
                 )
+            elif source == "Any":
+                await self.async_connect_source()
             else:
                 entity = await self.get_entity(source)
                 if isinstance(entity, Zone):
@@ -1498,8 +1501,6 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                     await self.async_connect_zones(None, [entity.id])
                 elif isinstance(entity, Source):
                     await self.async_connect_source(entity)
-        else:
-            await self.async_connect_source()
 
     
     async def async_connect_zones(self, zones: Optional[List[int]], groups: Optional[List[int]]):
