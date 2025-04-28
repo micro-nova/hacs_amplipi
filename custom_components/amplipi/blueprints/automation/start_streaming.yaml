@@ -7,7 +7,7 @@ blueprint:
     source:
       name: "Source"
       description: "Select the source\nOptional, used to ensure the automation still works when all 4 sources are in use via overriding a connected stream"
-      default: "None"
+      default: "Any"
       selector:
         entity:
           filter:
