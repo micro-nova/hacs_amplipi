@@ -1491,13 +1491,13 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                     )
                 )
             else:
-                source = await self.get_entity(source)
-                if isinstance(source, Zone):
-                    await self.async_connect_zones([source.id], None)
-                elif isinstance(source, Group):
-                    await self.async_connect_zones(None, [source.id])
-                elif isinstance(source, Source):
-                    await self.async_connect_source(source)
+                entity = await self.get_entity(source)
+                if isinstance(entity, Zone):
+                    await self.async_connect_zones([entity.id], None)
+                elif isinstance(entity, Group):
+                    await self.async_connect_zones(None, [entity.id])
+                elif isinstance(entity, Source):
+                    await self.async_connect_source(entity)
         else:
             await self.async_connect_source()
 
