@@ -1455,30 +1455,21 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     def volume_level(self):
         """Volume level of the media player (0..1)."""
         if self._current_source is not None:
-            i = 0
-            vol = 0
-            for item in self._current_groups and self._current_zones:
-                vol += item.vol_f
-                i += 1
-            if i > 0:
-                return vol / i
+            vols = [zone.vol_f for zone in self._current_zones]
+            if len(self._current_zones) > 0:
+                return sum(vols) / len(vols)
         return None
 
     @property
     def is_volume_muted(self) -> bool:
-        """Boolean if volume is currently muted."""
+        """Boolean if all connected zones are currently muted. If no zones connected, return muted."""
         if self._current_source is not None:
-
-            group = next(filter(lambda z: z.mute is not None, self._current_groups), None)
-            if group is not None:
-                return group.mute
-            
-            zone = next(filter(lambda z: z.mute is not None, self._current_zones), None)
-            if zone is not None:
-                return zone.mute
+            for zone in self._current_zones:
+                if not zone.mute:
+                    return False
         return True
 
-
+ 
     async def async_select_source(self, source: Optional[str] = None):
         # This is a home assistant MediaPlayer built-in function, so the source being passed in isn't the same as an amplipi source
         # the argument "source" can either be the name or entity_id of a zone, group, or amplipi source
