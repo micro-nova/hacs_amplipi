@@ -104,6 +104,15 @@ async def async_remove_entry(hass, entry) -> None:
 class AmpliPiSource(MediaPlayerEntity):
     """Representation of an AmpliPi Source Input, of which 4 are supported (Hard Coded)."""
 
+    def available_streams(self, source: Source): # TODO: Move to AmplipiMediaPlayer class once that's available
+        streams = ['None']
+        if self._streams is not None:
+            # Excludes every RCA except for the one related to the given source
+            RCAs = [996, 997, 998, 999]
+            rca_selectable = RCAs[source.id]
+            streams += [stream.name for stream in self._streams if stream.id not in RCAs or stream.id == rca_selectable]
+        return streams
+
     @property
     def should_poll(self):
         """Polling needed."""
@@ -469,17 +478,11 @@ class AmpliPiSource(MediaPlayerEntity):
             elif self._current_stream is not None:
                 return self._current_stream.name
         return 'None'
-
+        
     @property
     def source_list(self):
         """List of available input sources."""
-        streams = ['None']
-        if self._streams is not None:
-            # Excludes every RCA except for the one related to the given source
-            RCAs = [996, 997, 998, 999]
-            rca_selectable = RCAs[self._id]
-            streams += [stream.name for stream in self._streams if stream.id not in RCAs or stream.id == rca_selectable]
-        return streams
+        return self.available_streams(self._source)
 
     async def _update_source(self, update: SourceUpdate):
         await self._client.set_source(self._source.id, update)
