@@ -541,10 +541,9 @@ class AmpliPiZone(MediaPlayerEntity):
                  client: AmpliPi):
         self._current_source = None
         self._sources = sources
-        self._is_group = group is not None
         self._split_group: bool = False
 
-        if self._is_group:
+        if group is not None:
             self._id = group.id
             self._name = group.name
             self._unique_id = f"{namespace}_group_{self._id}"
@@ -580,7 +579,7 @@ class AmpliPiZone(MediaPlayerEntity):
             await self.async_turn_off()
 
     async def async_turn_on(self):
-        if self._is_group:
+        if self._group is not None:
             _LOGGER.info(f"Turning group {self._name} on")
             if self._current_source is not None:
                 _LOGGER.info(f"Disconnecting zones from source {self._current_source}")
@@ -602,7 +601,7 @@ class AmpliPiZone(MediaPlayerEntity):
         self._is_off = False
 
     async def async_turn_off(self):
-        if self._is_group:
+        if self._group is not None:
             _LOGGER.info(f"Turning group {self._name} on")
             if self._current_source is not None:
                 _LOGGER.info(f"Disconnecting zones from source {self._current_source}")
@@ -627,7 +626,7 @@ class AmpliPiZone(MediaPlayerEntity):
         if mute is None:
             return
         _LOGGER.info(f"setting mute to {mute}")
-        if self._is_group:
+        if self._group is not None:
             await self._update_group(
                 MultiZoneUpdate(
                     groups=[self._group.id],
@@ -645,13 +644,13 @@ class AmpliPiZone(MediaPlayerEntity):
         if volume is None:
             return
         
-        if self._is_group and self._group is not None:
+        if self._group is not None:
             self._group.vol_f = volume
         elif self._zone is not None:
             self._zone.vol_f = volume
     
         _LOGGER.info(f"setting volume to {volume}")
-        if self._is_group:
+        if self._group is not None:
             await self._update_group(
                 MultiZoneUpdate(
                     groups=[self._group.id],
@@ -710,7 +709,7 @@ class AmpliPiZone(MediaPlayerEntity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device info for this device."""
-        if self._is_group:
+        if self._group is not None:
             model = "AmpliPi Group"
         else:
             model = "AmpliPi Zone"
@@ -750,7 +749,7 @@ class AmpliPiZone(MediaPlayerEntity):
 
         try:
             state = await self._client.get_status()
-            if self._is_group:
+            if self._group is not None:
                 group: Group = next(filter(lambda z: z.id == self._id, state.groups), None)
                 if not group:
                     self._last_update_successful = False
@@ -764,7 +763,7 @@ class AmpliPiZone(MediaPlayerEntity):
                 for zone_index in group.zones:
                     related_zones.append(state.zones[zone_index].source_id)
                 # Is every zone connected to the same source?
-                self._split_group = len(set(related_zones)) == 1
+                self._split_group = len(set(related_zones)) != 1
             else:
                 zone = next(filter(lambda z: z.id == self._id, state.zones), None)
                 if not zone:
@@ -794,7 +793,7 @@ class AmpliPiZone(MediaPlayerEntity):
         self._current_source = None
 
         # When a zone is off it connects to source_id -2, groups also yield the source_id that all requisite zones are already connected to
-        if self._is_group:
+        if self._group is not None:
             self._current_source = next(filter(lambda s: self._group.source_id == s.id, sources), None)
             self._is_off = self._group.source_id == -2
                 
@@ -829,7 +828,7 @@ class AmpliPiZone(MediaPlayerEntity):
         """Return the state of the zone.""" 
         if self._is_off and self._current_source is None:
             return STATE_OFF
-        elif self._last_update_successful is False or (self._is_group and self._split_group):
+        elif self._last_update_successful is False or (self._group is not None and self._split_group):
             return STATE_UNKNOWN
         elif self._current_source is None or self._current_source == -1 or self._current_source.info is None or self._current_source.info.state is None:
             return STATE_IDLE
@@ -856,7 +855,7 @@ class AmpliPiZone(MediaPlayerEntity):
     @property
     def volume_level(self):
         """Volume level of the media player (0..1)."""
-        if self._is_group and self._group is not None:
+        if self._group is not None:
             return self._group.vol_f
         elif self._zone is not None:
             return self._zone.vol_f
@@ -865,7 +864,7 @@ class AmpliPiZone(MediaPlayerEntity):
     @property
     def is_volume_muted(self) -> bool:
         """Boolean if volume is currently muted."""
-        if self._is_group:
+        if self._group is not None:
             return self._group.mute
         else:
             return self._zone.mute
@@ -873,7 +872,7 @@ class AmpliPiZone(MediaPlayerEntity):
     async def async_select_source(self, source):
         source_id = int(source.split(' ')[1]) - 1
         self._selected_source = source
-        if self._is_group:
+        if self._group is not None:
             await self._update_group(
                 MultiZoneUpdate(
                     groups=[self._group.id],
@@ -963,7 +962,7 @@ class AmpliPiZone(MediaPlayerEntity):
         return self._extra_attributes
 
     async def _get_extra_attributes(self):
-        if self._is_group:
+        if self._group is not None:
             state = await self._client.get_status()
             zone_ids = []
 
@@ -980,7 +979,7 @@ class AmpliPiZone(MediaPlayerEntity):
 
     async def _update_available(self):
         state = await self._client.get_status()
-        if self._is_group:
+        if self._group is not None:
             for zone_id in self._group.zones:
                 for state_zone in state.zones:
                     if state_zone.id == zone_id and not state_zone.disabled:
