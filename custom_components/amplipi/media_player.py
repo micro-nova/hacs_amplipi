@@ -93,7 +93,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi)
     ]
 
-    async_add_entities(sources + zones + groups + announcer)
+    async_add_entities(sources + zones + groups + streams + announcer)
 
 
 async def async_remove_entry(hass, entry) -> None:
