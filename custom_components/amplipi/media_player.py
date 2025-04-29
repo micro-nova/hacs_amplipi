@@ -1621,8 +1621,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             if available_source:
                source_id = available_source.id
             else:
-                # TODO: Uncomment this section once AmplipiMediaPlayer class is merged
-                # persistent_notification.create(self.hass, f"Stream {self._name} could not find an available source to connect to, all sources in use.\n\nPlease disconnect a source or provide one to override and try again.", f"{self._name} could not connect", f"{self._id}_connection_error")
+                persistent_notification.create(self.hass, f"Stream {self._name} could not find an available source to connect to, all sources in use.\n\nPlease disconnect a source or provide one to override and try again.", f"{self._name} could not connect", f"{self._id}_connection_error")
                 raise Exception("All sources are in use, disconnect a source or select one to override and try again.")
             
         if source_id is not None:
