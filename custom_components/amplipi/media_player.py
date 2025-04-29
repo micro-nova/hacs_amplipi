@@ -1402,7 +1402,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             return
 
         if self._current_source is not None:
-            _LOGGER.warning(f"setting mute to {mute}")
+            _LOGGER.info(f"setting mute to {mute}")
             await self._update_zones(
                 ZoneUpdate(
                     mute=mute,
@@ -1481,8 +1481,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                 return
         except Exception as e:
             self._last_update_successful = False
-            _LOGGER.error(f'Could not update stream {self._id} due to error:')
-            _LOGGER.error(e)
+            _LOGGER.error(f'Could not update stream {self._id} due to error: {e}')
             return
 
         await self._get_extra_attributes()
@@ -1600,7 +1599,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
 
     async def async_connect_source(self, source: Optional[Source] = None):
         """Connects the stream to a source. If a source is not provided, searches for an available source."""
-        _LOGGER.warning(f"Stream {self._name} attempting to connect to source {source}")
+        _LOGGER.info(f"Stream {self._name} attempting to connect to source {source}")
         source_id = None
         if self._stream.type == "rca":
             # RCAs are hardware constrained to only being able to use one specific source
@@ -1616,18 +1615,17 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                 await self.swap_source(source.id)
 
         if source is not None:
-            _LOGGER.warning(f"source: {source}")
             source_id = source.id
         else:
             available_source = await self.find_source()
             if available_source:
                source_id = available_source.id
             else:
-                persistent_notification.create(self.hass, f"Stream {self._name} could not find an available source to connect to, all sources in use.\n\nPlease disconnect a source or provide one to override and try again.", f"{self._name} could not connect", f"{self._id}_connection_error")
+                # TODO: Uncomment this section once AmplipiMediaPlayer class is merged
+                # persistent_notification.create(self.hass, f"Stream {self._name} could not find an available source to connect to, all sources in use.\n\nPlease disconnect a source or provide one to override and try again.", f"{self._name} could not connect", f"{self._id}_connection_error")
                 raise Exception("All sources are in use, disconnect a source or select one to override and try again.")
             
         if source_id is not None:
-            _LOGGER.warning(f"source_id: {source_id}")
             await self._client.set_source(
                 source_id,
                 SourceUpdate(
