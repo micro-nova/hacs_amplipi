@@ -51,14 +51,6 @@ SUPPORT_LOOKUP_DICT = {
     'prev': MediaPlayerEntityFeature.PREVIOUS_TRACK,
 }
 
-STREAM_SUPPORT_LOOKUP_DICT = { #This is currently the same as the SOURCE version, I think there will still be value in having multiple versions
-    'play': MediaPlayerEntityFeature.PLAY,
-    'pause': MediaPlayerEntityFeature.PAUSE,
-    'stop': MediaPlayerEntityFeature.STOP,
-    'next': MediaPlayerEntityFeature.NEXT_TRACK,
-    'prev': MediaPlayerEntityFeature.PREVIOUS_TRACK,
-}
-
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 1
@@ -87,16 +79,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         AmpliPiZone(DOMAIN, None, group, status.streams, status.sources, vendor, version, image_base_path, amplipi)
         for group in status.groups]
 
-    streams: list[MediaPlayerEntity] = [
-        AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi)
-        for stream in status.streams
-    ]
-
     announcer: list[MediaPlayerEntity] = [
         AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi)
     ]
 
-    async_add_entities(sources + zones + groups + streams + announcer)
+    async_add_entities(sources + zones + groups + announcer)
 
 
 async def async_remove_entry(hass, entry) -> None:
