@@ -457,7 +457,7 @@ class AmpliPiSource(MediaPlayerEntity):
             return group.vol_f
         elif zone is not None:
             return zone.vol_f
-        return STATE_UNKNOWN
+        return None
 
     @property
     def is_volume_muted(self) -> bool:
@@ -468,7 +468,7 @@ class AmpliPiSource(MediaPlayerEntity):
             return group.mute
         elif zone is not None:
             return zone.mute
-        return STATE_UNKNOWN
+        return False
 
     @property
     def source(self):
