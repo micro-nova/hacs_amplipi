@@ -1285,11 +1285,11 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             self._is_off = False
         
         if await self.find_source(): # Autoconnect stream if there is space
-            await self.async_connect_source()
+            await self.async_connect_stream_to_source(self._stream)
         elif self._stream.type == "rca": # Autoconnect stream if it can only ever connect to one source, regardless of space
             goal_source = next((s for s in self._sources if s.id == self._id - 996), None)
             if goal_source:
-                await self.async_connect_source(goal_source)
+                await self.async_connect_stream_to_source(self._stream, goal_source)
 
     async def async_turn_off(self):
         if self._current_source is not None:
@@ -1472,7 +1472,6 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                 if not zone.mute:
                     return False
         return True
-
  
     async def async_select_source(self, source: Optional[str] = None):
         # This is a home assistant MediaPlayer built-in function, so the source being passed in isn't the same as an amplipi source
@@ -1487,80 +1486,20 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                     )
                 )
             elif source == "Any":
-                await self.async_connect_source()
+                await self.async_connect_stream_to_source(self._stream)
             else:
                 entity = await self.get_entity(source)
                 if isinstance(entity, Zone):
-                    await self.async_connect_zones([entity.id], None)
+                    await self.async_connect_zones_to_stream(self._stream, [entity.id], None)
                 elif isinstance(entity, Group):
-                    await self.async_connect_zones(None, [entity.id])
+                    await self.async_connect_zones_to_stream(self._stream, None, [entity.id])
                 elif isinstance(entity, Source):
-                    await self.async_connect_source(entity)
-
-    
-    async def async_connect_zones(self, zones: Optional[List[int]], groups: Optional[List[int]]):
-        """Connects zones and/or groups to the current source"""
-        if self._current_source is None:
-            await self.async_connect_source()
-        
-        if self._current_source is not None:
-            await self._client.set_zones(
-                MultiZoneUpdate(
-                    zones=zones,
-                    groups=groups,
-                    update=ZoneUpdate(
-                        source_id=self._current_source.id
-                    )
-                )
-            )
-
-    async def async_connect_source(self, source: Optional[Source] = None):
-        """Connects the stream to a source. If a source is not provided, searches for an available source."""
-        _LOGGER.info(f"Stream {self._name} attempting to connect to source {source}")
-        source_id = None
-        if self._stream.type == "rca":
-            # RCAs are hardware constrained to only being able to use one specific source
-            # If that source is busy, free it up without interrupting a users music
-            if self._current_source is not None and source is not None and source.id != self._current_source.id:
-                raise Exception("RCA streams can only connect to sources with the same ID")
-
-            state = await self._client.get_status()
-            source = state.sources[self._id - 996]
-            # It would be cleaner to do the following, but pyamplipi doesn't support RCA stream's index value atm:
-            # source = state.sources[self._stream.index]
-            if source.input not in [None, "None"]:
-                await self.swap_source(source.id)
-
-        if source is not None:
-            source_id = source.id
-        else:
-            available_source = await self.find_source()
-            if available_source:
-               source_id = available_source.id
-            else:
-                persistent_notification.create(self.hass, f"Stream {self._name} could not find an available source to connect to, all sources in use.\n\nPlease disconnect a source or provide one to override and try again.", f"{self._name} could not connect", f"{self._id}_connection_error")
-                raise Exception("All sources are in use, disconnect a source or select one to override and try again.")
-            
-        if source_id is not None:
-            await self._client.set_source(
-                source_id,
-                SourceUpdate(
-                    input=f'stream={self._id}'
-                )
-            )
-            await self.async_update()
+                    await self.async_connect_stream_to_source(self._stream, entity)
 
     @property
     def source_list(self):
         """List of available input sources."""
         return self._attr_source_list
-
-    @property
-    def source(self):
-        """Returns the current source playing, if this is wrong it won't show up as the selected source on HomeAssistant"""
-        if self._current_source in [None, "None"]:
-            return "None"
-        return f'Source {self._current_source.id + 1}'
 
     @property
     def extra_state_attributes(self):
