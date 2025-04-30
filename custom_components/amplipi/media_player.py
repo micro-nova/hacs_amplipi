@@ -1566,7 +1566,6 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                 if not zone.mute:
                     return False
         return True
-
  
     async def async_select_source(self, source: Optional[str] = None):
         # This is a home assistant MediaPlayer built-in function, so the source being passed in isn't the same as an amplipi source
