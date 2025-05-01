@@ -826,7 +826,7 @@ class AmpliPiZone(MediaPlayerEntity):
         """Return the state of the zone.""" 
         if self._is_off and self._current_source is None:
             return STATE_OFF
-        elif self._last_update_successful is False or (self._group is not None and self._split_group):
+        elif self._last_update_successful is False or self._split_group:
             return STATE_UNKNOWN
         elif self._current_source is None or self._current_source == -1 or self._current_source.info is None or self._current_source.info.state is None:
             return STATE_IDLE
