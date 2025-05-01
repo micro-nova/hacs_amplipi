@@ -461,12 +461,12 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         """Remove this player from any group."""
 
     async def async_play_media(self, media_type, media_id, **kwargs):
-        _LOGGER.warning(f'Play Media {media_type} {media_id} {kwargs}')
+        _LOGGER.debug(f'Play Media {media_type} {media_id} {kwargs}')
 
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(self.hass, media_id)
             media_id = play_item.url
-            _LOGGER.warning(f'Playing media source: {play_item} {media_id}')
+            _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
         media_id = async_process_play_media_url(self.hass, media_id)
         await self._client.play_media(
@@ -478,7 +478,6 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         pass
 
     async def async_select_source(self, source):
-        _LOGGER.warning(f"Source: {source}")
         if self._source is not None and self._source.name == source:
             await self._client.set_source(
                 self._id,
@@ -1037,7 +1036,6 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         else:
             entity = await self.get_entity(source)
             args = (entity, None, [self._id]) if self._group is not None else (entity, [self._id], None)
-            _LOGGER.warning(f"source: {source}\nentity: {entity}")
             if isinstance(entity, Stream):
                 await self.async_connect_zones_to_stream(*args)
             elif isinstance(entity, Source):
@@ -1065,12 +1063,12 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         )
 
     async def async_play_media(self, media_type, media_id, **kwargs):
-        _LOGGER.warning(f'Play Media {media_type} {media_id} {kwargs}')
+        _LOGGER.debug(f'Play Media {media_type} {media_id} {kwargs}')
 
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(self.hass, media_id)
             media_id = play_item.url
-            _LOGGER.warning(f'Playing media source: {play_item} {media_id}')
+            _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
         #No source, see if we can find an empty one
         if self._current_source is None:
@@ -1210,11 +1208,11 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         )
 
     async def async_play_media(self, media_type, media_id, **kwargs):
-        _LOGGER.warning(f'Play Media {media_type} {media_id} {kwargs}')
+        _LOGGER.debug(f'Play Media {media_type} {media_id} {kwargs}')
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(self.hass, media_id)
             media_id = play_item.url
-            _LOGGER.warning(f'Playing media source: {play_item} {media_id}')
+            _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
         media_id = async_process_play_media_url(self.hass, media_id)
         await self._client.announce(
