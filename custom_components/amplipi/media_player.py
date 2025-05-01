@@ -219,7 +219,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
         match = re.search(r"\d+", stream) # Find first uninterrupted substring of digits
         if match:
             output = match.group()
-            if int(output) > 995: # all stream ids are above 995
+            if int(output) > 994: # all stream ids are 995 or above
                 return output
         _LOGGER.error(f"extract_stream_id could not determine stream ID from: {stream}")
 
@@ -400,7 +400,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
                     zones=[z.id for z in self._zones],
                     groups=[z.id for z in self._groups],
                     update=ZoneUpdate(
-                        source=None,
+                        source_id=-1,
                     )
                 )
             )
@@ -478,6 +478,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         pass
 
     async def async_select_source(self, source):
+        _LOGGER.warning(f"Source: {source}")
         if self._source is not None and self._source.name == source:
             await self._client.set_source(
                 self._id,
