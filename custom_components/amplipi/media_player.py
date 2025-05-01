@@ -137,7 +137,7 @@ class AmpliPiSource(MediaPlayerEntity):
 
     async def async_turn_off(self):
         if self._source is not None:
-            _LOGGER.warning(f"disconnecting stream from source {self._name}")
+            _LOGGER.info(f"disconnecting stream from source {self._name}")
             await self._update_source(SourceUpdate(
                 input='None'
             ))
@@ -238,12 +238,12 @@ class AmpliPiSource(MediaPlayerEntity):
         """Remove this player from any group."""
 
     async def async_play_media(self, media_type, media_id, **kwargs):
-        _LOGGER.warning(f'Play Media {media_type} {media_id} {kwargs}')
+        _LOGGER.debug(f'Play Media {media_type} {media_id} {kwargs}')
 
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(self.hass, media_id)
             media_id = play_item.url
-            _LOGGER.warning(f'Playing media source: {play_item} {media_id}')
+            _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
         media_id = async_process_play_media_url(self.hass, media_id)
         await self._client.play_media(
@@ -878,12 +878,12 @@ class AmpliPiZone(MediaPlayerEntity):
         )
 
     async def async_play_media(self, media_type, media_id, **kwargs):
-        _LOGGER.warning(f'Play Media {media_type} {media_id} {kwargs}')
+        _LOGGER.debug(f'Play Media {media_type} {media_id} {kwargs}')
 
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(self.hass, media_id)
             media_id = play_item.url
-            _LOGGER.warning(f'Playing media source: {play_item} {media_id}')
+            _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
         #No source, see if we can find an empty one
         if self._current_source is None:
@@ -1051,11 +1051,11 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         )
 
     async def async_play_media(self, media_type, media_id, **kwargs):
-        _LOGGER.warning(f'Play Media {media_type} {media_id} {kwargs}')
+        _LOGGER.debug(f'Play Media {media_type} {media_id} {kwargs}')
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(self.hass, media_id)
             media_id = play_item.url
-            _LOGGER.warning(f'Playing media source: {play_item} {media_id}')
+            _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
         media_id = async_process_play_media_url(self.hass, media_id)
         await self._client.announce(
