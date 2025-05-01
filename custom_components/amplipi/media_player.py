@@ -280,6 +280,20 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
                 )
                 await self.async_update()
 
+    async def async_toggle(self):
+        if self._is_off:
+            await self.async_turn_on()
+        else:
+            await self.async_turn_off()
+            
+    async def async_turn_on(self):
+        if self._is_off:
+            self._is_off = False
+
+    async def async_turn_off(self):
+        if not self._is_off:
+            self._is_off = False
+
     async def async_update(self): # Meant to be overridden by child classes, only here so that the parent context can also use it inside of other functions
         """Retrieve latest state."""
         raise NotImplementedError("Subclasses should implement this method")
@@ -377,15 +391,6 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         self._client = client
         self._unique_id = f"{namespace}_source_{source.id}"
         self._attr_device_class = MediaPlayerDeviceClass.RECEIVER
-        
-    async def async_toggle(self):
-        if self._is_off:
-            await self.async_turn_on()
-        else:
-            await self.async_turn_off()
-
-    async def async_turn_on(self):
-        self._is_off = False
 
     async def async_turn_off(self):
         if self._source is not None:
@@ -761,12 +766,6 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         self._attr_device_class = MediaPlayerDeviceClass.SPEAKER
         self._is_off = False
         self._current_stream = None
-
-    async def async_toggle(self):
-        if self._is_off:
-            await self.async_turn_on()
-        else:
-            await self.async_turn_off()
 
     async def async_turn_on(self):
         if self._group is not None:
@@ -1285,9 +1284,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             await self.async_turn_on()
 
     async def async_turn_on(self):
-        if self._is_off:
-            self._is_off = False
-        
+        super().async_turn_on()
         if await self.find_source(): # Autoconnect stream if there is space
             await self.async_connect_stream_to_source(self._stream)
         elif self._stream.type == "rca": # Autoconnect stream if it can only ever connect to one source, regardless of space
