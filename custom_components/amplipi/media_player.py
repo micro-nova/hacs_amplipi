@@ -648,7 +648,7 @@ class AmpliPiZone(MediaPlayerEntity):
         if volume is None:
             return
         
-        if self._is_group:
+        if self._is_group and self._group is not None:
             self._group.vol_f = volume
         elif self._zone is not None:
             self._zone.vol_f = volume
@@ -855,7 +855,7 @@ class AmpliPiZone(MediaPlayerEntity):
     @property
     def volume_level(self):
         """Volume level of the media player (0..1)."""
-        if self._is_group:
+        if self._is_group and self._group is not None:
             return self._group.vol_f
         elif self._zone is not None:
             return self._zone.vol_f
