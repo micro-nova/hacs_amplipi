@@ -212,7 +212,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
         match = re.search(r"\d+", stream) # Find first uninterrupted substring of digits
         if match:
             output = match.group()
-            if int(output) > 995: # all stream ids are above 995
+            if int(output) > 994: # all stream ids are 995 or above
                 return output
         _LOGGER.error("extract_stream_id could not determine stream ID")
 
