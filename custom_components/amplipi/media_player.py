@@ -160,7 +160,7 @@ class AmpliPiSource(MediaPlayerEntity):
                     zones=[z.id for z in self._zones],
                     groups=[z.id for z in self._groups],
                     update=ZoneUpdate(
-                        source=None,
+                        source_id=-1,
                     )
                 )
             )
