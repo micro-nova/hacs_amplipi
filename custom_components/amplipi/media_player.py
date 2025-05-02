@@ -1284,7 +1284,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             await self.async_turn_on()
 
     async def async_turn_on(self):
-        super().async_turn_on()
+        await super().async_turn_on()
         if await self.find_source(): # Autoconnect stream if there is space
             await self.async_connect_stream_to_source(self._stream)
         elif self._stream.type == "rca": # Autoconnect stream if it can only ever connect to one source, regardless of space
