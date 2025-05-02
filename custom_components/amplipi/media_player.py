@@ -1283,6 +1283,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     async def async_turn_on(self):
         self._is_off = False
         
+        # If the stream is an rca (aka can only connect to one source and will overtake whatever's there) or if there's an available source, automatically connect
         if self._stream.type == "rca" or await self.find_source():
             await self.async_connect_stream_to_source(self._stream)
 
