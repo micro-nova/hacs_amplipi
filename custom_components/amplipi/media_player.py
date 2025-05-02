@@ -478,7 +478,7 @@ class AmpliPiSource(MediaPlayerEntity):
             elif self._current_stream is not None:
                 return self._current_stream.name
         return 'None'
-        
+
     @property
     def source_list(self):
         """List of available input sources."""
