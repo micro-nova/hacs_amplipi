@@ -1281,33 +1281,34 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             await self.async_turn_on()
 
     async def async_turn_on(self):
-        if self._is_off:
-            self._is_off = False
+        self._is_off = False
         
-        if await self.find_source(): # Autoconnect stream if there is space
+        if self._stream.type == "rca" or await self.find_source():
             await self.async_connect_stream_to_source(self._stream)
-        elif self._stream.type == "rca": # Autoconnect stream if it can only ever connect to one source, regardless of space
-            goal_source = next((s for s in self._sources if s.id == self._id - 996), None)
-            if goal_source:
-                await self.async_connect_stream_to_source(self._stream, goal_source)
 
     async def async_turn_off(self):
-        if self._current_source is not None:
-            _LOGGER.info(f"Disconnecting stream from source {self._current_source}")
-            await self._update_zones(
-                ZoneUpdate(
-                    source_id=-1,
+        try:
+            if self._current_source is not None:
+                _LOGGER.info(f"Disconnecting stream from source {self._current_source.name}")
+                await self._update_zones(
+                    ZoneUpdate(
+                        source_id=-1,
+                    )
                 )
-            )
-            await self._client.set_source(
-                self._current_source.id,
-                SourceUpdate(
-                    input='None'
+                await self._client.set_source(
+                    self._current_source.id,
+                    SourceUpdate(
+                        input='None'
+                    )
                 )
-            )
+        except AttributeError:
+            # There can be a race condition where self._current_source is not None and then becomes None by the time self._current_source.name or self._current_source.id is read
+            # This happens if the user (or another entity/automation) disconnects the stream from the source while (or shortly before, due to the polling rate) this function runs
+            # I'd rather suppress the error and ensure that the current state is as accurate as possible due to the error functionally being "Cannot disconnect due to already being disconnected"
+            _LOGGER.debug(f"{self._name} had trouble disconnecting from a source")
+        finally:
+            self._is_off = True
             await self.async_update()
-            self._current_source = None
-        self._is_off = True
 
     async def async_mute_volume(self, mute):
         if mute is None:
