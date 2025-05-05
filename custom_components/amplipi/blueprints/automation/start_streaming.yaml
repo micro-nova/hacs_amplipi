@@ -56,17 +56,6 @@ action:
   - repeat:
       for_each: !input zones
       sequence:
-        - service: media_player.select_source
-          target:
-            entity_id: !input stream
-          data:
-            source: "{{ repeat.item }}"
-
-        - service: media_player.volume_mute
-          target:
-            entity_id: "{{ repeat.item }}"
-          data:
-            is_volume_muted: true
           
         - service: media_player.volume_set
           data:
@@ -74,8 +63,21 @@ action:
           target:
             entity_id: "{{ repeat.item }}"
 
+        # Mute before connecting so that the second loop has the chance to turn the zones/groups on all at once
+        - service: media_player.volume_mute
+          target:
+            entity_id: "{{ repeat.item }}"
+          data:
+            is_volume_muted: true
+
+        - service: media_player.select_source
+          target:
+            entity_id: !input stream
+          data:
+            source: "{{ repeat.item }}"
+
 # A second repeat loop so that every zone is already connected with a volume set before all turning on at once
-# This reduces the chance of having the zones / groups turn on one by one with a noticable gap between them
+# This reduces the chance of having the zones/groups turn on one by one with a noticable gap between them
   - repeat:
       for_each: !input zones
       sequence:
