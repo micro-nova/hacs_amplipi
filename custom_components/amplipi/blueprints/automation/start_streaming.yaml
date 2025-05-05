@@ -34,6 +34,16 @@ blueprint:
             - integration: AmpliPi
           multiple: true
 
+    volume:
+      name: "Volume"
+      description: "Select what volume to start the zones on"
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.01
+          mode: slider
+
 mode: single
 
 action:
@@ -52,6 +62,23 @@ action:
           data:
             source: "{{ repeat.item }}"
 
+        - service: media_player.volume_mute
+          target:
+            entity_id: "{{ repeat.item }}"
+          data:
+            is_volume_muted: true
+          
+        - service: media_player.volume_set
+          data:
+            volume_level: !input volume
+          target:
+            entity_id: "{{ repeat.item }}"
+
+# A second repeat loop so that every zone is already connected with a volume set before all turning on at once
+# This reduces the chance of having the zones / groups turn on one by one with a noticable gap between them
+  - repeat:
+      for_each: !input zones
+      sequence:
         - service: media_player.volume_mute
           target:
             entity_id: "{{ repeat.item }}"
