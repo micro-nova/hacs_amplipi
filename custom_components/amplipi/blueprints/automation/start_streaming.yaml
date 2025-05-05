@@ -2,6 +2,7 @@ blueprint:
   name: "AmpliPi Start Streaming"
   description: "Connect a Source to a Stream and assign Zone(s) to the Source.\nAfter filling out these sections, hit the three dots in the top right and hit 'Take Control' to set the triggers of the automation"
   domain: automation
+  author: Micro-Nova
 
   input:
     source:
