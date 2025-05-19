@@ -766,9 +766,9 @@ class AmpliPiZone(MediaPlayerEntity):
                 if any_enabled_zone is not None:
                     enabled = True
                 
-                related_zones = [state.zones[zone_index].source_id for zone_index in group.zones]
+                connected_sources = [state.zones[zone_index].source_id for zone_index in group.zones]
                 # Is every zone connected to the same source?
-                self._split_group = len(set(related_zones)) != 1
+                self._split_group = len(set(connected_sources)) != 1
             else:
                 zone = next(filter(lambda z: z.id == self._id, state.zones), None)
                 if not zone:
