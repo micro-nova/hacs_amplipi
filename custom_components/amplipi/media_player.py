@@ -149,11 +149,12 @@ class AmpliPiSource(MediaPlayerEntity):
     async def async_turn_on(self):
         # Unlike zones and groups, sources don't have anything within them on the amplipi side that says they're off
         # Flipping the value of _is_off only effects what "@property state" later on outputs
+        _LOGGER.info(f"Turning source {self._name} on")
         self._is_off = False
 
     async def async_turn_off(self):
         if self._source is not None:
-            _LOGGER.info(f"disconnecting stream from source {self._name}")
+            _LOGGER.info(f"Turning source {self._name} off, disconnecting all zones and streams")
             await self._update_source(SourceUpdate(
                 input='None'
             ))
