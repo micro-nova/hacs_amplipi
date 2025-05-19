@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os
 import shutil
+import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_NAME, CONF_ID
@@ -10,6 +11,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pyamplipi.amplipi import AmpliPi
 
 from .const import DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, CONF_API_PATH
+
+_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["media_player"]
 
@@ -51,8 +54,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 def copy_blueprints(hass: HomeAssistant):
     """Recursively copy all blueprints from the integration directory to Home Assistant's blueprints folder."""
+    # Despite only having one blueprint thus far, I can envision a world where we'd want more
     source_dir = os.path.join(os.path.dirname(__file__), "blueprints", "automation")
     dest_dir = os.path.join(hass.config.path("blueprints/automation/hacs_amplipi"))
+
+    _LOGGER.warning(f"AmpliPi is copying blueprints from {source_dir} to {dest_dir}")
 
     if not os.path.exists(source_dir):
         return

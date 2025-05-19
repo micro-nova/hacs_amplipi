@@ -96,6 +96,9 @@ async def async_remove_entry(hass, entry) -> None:
 
 
 class AmpliPiMediaPlayer(MediaPlayerEntity):
+    _id: int
+    _unique_id: str
+    _name: str
     _zones: list[Zone] = []
     _groups: List[Group] = []
     _vendor: str
@@ -107,8 +110,6 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
     _current_stream: Stream
     _current_source: Source
     _available: bool = True
-    _name: str
-    _unique_id: str
     _is_off: bool = False
     
     async def async_connect_stream_to_source(self, stream: Stream, source: Optional[Source] = None):
@@ -187,6 +188,13 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
         # Match a regex prior to str.replace() just in case the user has a stream name containing the word source
         if re.match(r"source [\d]", decoded_entity_name):
             decoded_entity_name = decoded_entity_name.replace("source", "output")
+
+        # In older firmwares, sources are named the same as their id (0-3). This loop gets those to parity with the expected newer stuff.
+        if not re.match(r"[a-zA-Z]", state.sources[0].name): # If there are no letters, edit the source names
+            i = 0
+            while i < len(state.sources):
+                state.sources[i].name = f"output {int(state.sources[i].name) + 1}"
+                i += 1
 
         for collection in (state.sources, state.zones, state.groups):
             match = next((item for item in collection if decode_name(item.name) == decoded_entity_name), None)
@@ -576,9 +584,9 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             state = await self._client.get_status()
             source = next(filter(lambda z: z.id == self._source.id, state.sources), None)
             streams = state.streams
-        except Exception:
+        except Exception as e:
             self._last_update_successful = False
-            _LOGGER.error(f'Could not update source {self._source.id}')
+            _LOGGER.error(f'Could not update source {self._source.id} due to error: {e}')
             return
 
         if not source:
@@ -593,9 +601,12 @@ class AmpliPiSource(AmpliPiMediaPlayer):
     def sync_state(self, state: Source, streams: List[Stream], zones: List[Zone], groups: List[Group]):
         self._source = state
 
+        self._unique_id = f"amplipi_source_{state.id}"
+        
         self._streams = self.encode_stream_names(streams)
 
         self._current_stream = None
+
 
         if 'stream=' in state.input and 'stream=local' not in state.input and self._streams is not None:
             stream_id = int(self._source.input.split('=')[1])
@@ -604,7 +615,8 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         self._zones = zones
         self._groups = groups
         self._last_update_successful = True
-        self._name = state.name
+        self._id = state.id
+        self._name = f"Source {state.id + 1}"
 
         info = self._source.info
 
@@ -888,7 +900,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
     async def async_update(self):
         """Retrieve latest state."""
-        _LOGGER.info(f'Retrieving state for source {self._id}')
+        _LOGGER.info(f'Retrieving state for zone {self._id}')
 
         zone = None
         group = None
@@ -915,9 +927,9 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                     self._last_update_successful = False
                     return
                 enabled = not zone.disabled
-        except Exception:
+        except Exception as e:
             self._last_update_successful = False
-            _LOGGER.error(f'Could not update {"group" if self._group is not None else "zone"} {self._id}')
+            _LOGGER.error(f'Could not update {"group" if self._group is not None else "zone"} {self._id} due to error: {e}')
             return
 
         await self._get_extra_attributes()
@@ -938,9 +950,13 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
         # When a zone is off it connects to source_id -2, groups also yield the source_id that all requisite zones are already connected to
         if self._group is not None:
+            self._name = self._group.name
+            self._unique_id = f"amplipi_group_{self._id}"
             self._current_source = next(filter(lambda s: self._group.source_id == s.id, sources), None)
             self._is_off = self._group.source_id == -2
         elif self._zone.source_id is not None:
+            self._name = self._zone.name
+            self._unique_id = f"amplipi_zone_{self._id}"
             self._current_source = next(filter(lambda s: self._zone.source_id == s.id, sources), None)
             self._is_off = self._zone.source_id == -2
 
@@ -1034,6 +1050,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                 )
         else:
             entity = await self.get_entity(source)
+            _LOGGER.warning(f"Source is: {source}\nEntity is: {entity}")
             args = (entity, None, [self._id]) if self._group is not None else (entity, [self._id], None)
             if isinstance(entity, Stream):
                 await self.async_connect_zones_to_stream(*args)
@@ -1410,6 +1427,8 @@ class AmpliPiStream(AmpliPiMediaPlayer):
 
     def sync_state(self, stream: Stream, sources: List[Source], current_source, zones, groups):
         self._stream = self.encode_stream_names(stream)
+        self._name = self._stream.name
+        self._unique_id = f"amplipi_stream_{stream.name}"
         self._sources = sources
         self._current_source = current_source
         if current_source: # Cannot be off while connected, but can be on while disconnected
