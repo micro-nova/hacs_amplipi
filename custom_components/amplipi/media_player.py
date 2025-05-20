@@ -112,15 +112,18 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
     # Was the last polling cycle successful?
     _last_update_successful: bool = False
 
-    
+    # List of various arbitrary extra state attributes. Home assistant expects this list to exist, but it doesn't necessarily contain anything in most of our cases.
     _extra_attributes: List = []
 
     # The currently connected source or stream connected to the entity. If the entity is a source or stream, these are aliased forms of their local self._source or self._stream.
     _current_stream: Optional[Stream]
     _current_source: Optional[Source]
 
-    # Does home assistant let you interact with the entity?
-    _available: bool = True
+    # Does home assistant let you interact with the entity? False by default, made true if the entity is able to poll properly.
+    _available: bool = False
+
+    # Should the media player be set to STATE_OFF?
+    _is_off: bool = False
 
     # The displayname of the entity. Also what is passed to async_select_source via dropdown menus.
     _name: str
@@ -395,10 +398,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         self._streams: List[Stream] = self.encode_stream_names(streams)
 
         self._id = source.id
-        self._current_stream = None
         self._image_base_path = image_base_path
-        self._zones: List[Zone] = []
-        self._groups: List[Group] = []
         self._name = f"Source {self._id + 1}"
         self._vendor = vendor
         self._version = version
@@ -409,9 +409,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
 
         self._client = client
         self._unique_id = f"{namespace}_source_{source.id}"
-        self._last_update_successful = False
         self._attr_device_class = MediaPlayerDeviceClass.RECEIVER
-        self._is_off = False
 
     async def async_toggle(self):
         if self._is_off:
@@ -762,7 +760,6 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                  streams: List[Stream], sources: List[Source],
                  vendor: str, version: str, image_base_path: str,
                  client: AmpliPi):
-        self._current_source = None
         self._sources = sources
         self._split_group: bool = False
 
@@ -791,11 +788,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             'Source 3',
             'Source 4',
         ]
-        self._available = False
-        self._extra_attributes = []
         self._attr_device_class = MediaPlayerDeviceClass.SPEAKER
-        self._current_stream = None
-        self._is_off = False
 
     async def async_toggle(self):
         if self._is_off:
@@ -1179,7 +1172,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         self._client = client
         self._last_update_successful = True
         self._available = True
-        self._extra_attributes = []
+        self._extra_attributes: List = []
         self._image_base_path = image_base_path
         self._name = "AmpliPi Announcement"
         self._volume = 0.5
