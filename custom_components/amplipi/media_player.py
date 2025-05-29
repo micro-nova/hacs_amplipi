@@ -1010,7 +1010,6 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         await self._get_extra_attributes()
         self._available = await self._update_available()
         self.sync_state(zone, group, state.streams, state.sources, enabled)
-        self.sync_state(zone, group, state.streams, state.sources, enabled)
 
     def sync_state(self, zone: Zone, group: Group, streams: List[Stream],
                    sources: List[Source], enabled: bool):
