@@ -4,7 +4,7 @@ import logging
 import operator
 import re
 from functools import reduce
-from typing import List, Optional, Union
+from typing import List, Optional
 from enum import Enum
 from pydantic import BaseModel
 
@@ -91,6 +91,10 @@ async def async_remove_entry(hass, entry) -> None:
     pass
 
 class AmpliPiType(Enum):
+    """
+        The amplipi type (source, zone, group, stream) of an amplipi entity
+        Stored in the _shared_state array under amplipi_type and used to filter against that same array and dict header
+    """
     STREAM = "stream"
     SOURCE = "source"
     ZONE = "zone"
@@ -98,6 +102,10 @@ class AmpliPiType(Enum):
 
 
 class AmpliPiStateEntry(BaseModel):
+    """
+        Schema for the _shared_state data for AmpliPi home assistant entities
+        Contains a mapping between the default name and id to the user-given name and id, as well as the amplipi type
+    """
     original_name: str
     unique_id: str
     friendly_name: str
@@ -105,6 +113,9 @@ class AmpliPiStateEntry(BaseModel):
     amplipi_type: AmpliPiType
 
 class AmpliPiMediaPlayer(MediaPlayerEntity):
+    """
+        Parent class of all AmpliPi MediaPlayer entities. Used to enforce common variables and provide shared functionality.
+    """
     # The amplipi-side id
     _id: int
 
@@ -148,8 +159,11 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
     # A single variable shared by all instances of AmpliPiMediaPlayer as received by async_setup_entry. Used to share mappings of user assigned names and ids with the original default names and ids provided by this integration
     _shared_state: list[AmpliPiStateEntry]
 
-    def update_shared_state_entry(self, original_name: str): # Cannot be invoked during __init__ of child classes as self.hass hasn't been instantiated until after __init__ completes
-        """Look up self in hass.states and record relevant states to shared_states array"""
+    def update_shared_state_entry(self, original_name: str):
+        """
+            Look up self in hass.states and record relevant states to shared_states array
+            Cannot be invoked during __init__ of child classes as self.hass hasn't been instantiated until after __init__ completes, and so is generally called during the state polling function.
+        """
         state = self.hass.states.get(self.entity_id)
         if state:
             entry = AmpliPiStateEntry(
@@ -168,14 +182,14 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
 
                 self._shared_state.append(entry)
 
-    def find_shared_entry_by_value(self, value: str) -> Union[AmpliPiStateEntry, None]:
+    def find_shared_entry_by_value(self, value: str) -> Optional[AmpliPiStateEntry]:
         """Find what dict within the shared_states array has a given value and return said dict"""
         for entry in self._shared_state:
             if value in entry.model_dump().values():
                 return entry
         return None
     
-    def find_shared_entries_by_type(self, entry_type: AmpliPiType) -> Union[list[AmpliPiStateEntry], None]:
+    def find_shared_entries_by_type(self, entry_type: AmpliPiType) -> Optional[list[AmpliPiStateEntry]]:
         """Return all entries of a given amplipi_type"""
         ret = []
         for entry in self._shared_state:
@@ -183,12 +197,14 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
                 ret.append(entry)
         return ret if len(ret) > 0 else None
             
-    def extract_amplipi_id_from_unique_id(self, uid: str) -> Union[int, None]:
-        """Extract all digits from a string and return them"""
-        # Useful for getting amplipi-side ids out of entity ids due to the entity unique id being formatted as one "media_player.amplipi_{stream, group, zone, or source}_{amplipi-side id}"
-        # Examples:
-        # media_player.amplipi_stream_1000
-        # media_player.amplipi_source_1
+    def extract_amplipi_id_from_unique_id(self, uid: str) -> Optional[int]:
+        """
+            Extracts all digits from a string and returns them
+            Useful for getting amplipi-side ids out of entity unique_ids due to the unique_id being formatted as "media_player.amplipi_{stream, group, zone, or source}_{amplipi-side id}"
+            Examples:
+            media_player.amplipi_stream_1000
+            media_player.amplipi_source_0
+        """
         match = re.search(r"\d+", uid)
         if match:
             return int(match.group())
