@@ -58,9 +58,9 @@ PARALLEL_UPDATES = 1
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the AmpliPi MultiZone Audio Controller"""
-    shared_state: list[AmpliPiStateEntry] = []
     hass_entry = hass.data[DOMAIN][config_entry.entry_id]
 
+    amplipi_state = AmpliPiState()
     amplipi: AmpliPi = hass_entry[AMPLIPI_OBJECT]
     vendor = hass_entry[CONF_VENDOR]
     name = hass_entry[CONF_NAME]
@@ -69,22 +69,27 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     status = await amplipi.get_status()
     sources: list[MediaPlayerEntity] = [
-        AmpliPiSource(DOMAIN, source, status.streams, vendor, version, image_base_path, amplipi, shared_state)
+        AmpliPiSource(DOMAIN, source, status.streams, vendor, version, image_base_path, amplipi, amplipi_state)
         for source in status.sources]
 
     zones: list[MediaPlayerEntity] = [
-        AmpliPiZone(DOMAIN, zone, None, status.streams, status.sources, vendor, version, image_base_path, amplipi, shared_state)
+        AmpliPiZone(DOMAIN, zone, None, status.streams, status.sources, vendor, version, image_base_path, amplipi, amplipi_state)
         for zone in status.zones]
 
     groups: list[MediaPlayerEntity] = [
-        AmpliPiZone(DOMAIN, None, group, status.streams, status.sources, vendor, version, image_base_path, amplipi, shared_state)
+        AmpliPiZone(DOMAIN, None, group, status.streams, status.sources, vendor, version, image_base_path, amplipi, amplipi_state)
         for group in status.groups]
+
+    streams: list[MediaPlayerEntity] = [
+        AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi, amplipi_state)
+        for stream in status.streams
+    ]
 
     announcer: list[MediaPlayerEntity] = [
         AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi)
     ]
 
-    async_add_entities(sources + zones + groups + announcer)
+    async_add_entities(sources + zones + groups + streams + announcer)
 
 
 async def async_remove_entry(hass, entry) -> None:
@@ -93,7 +98,7 @@ async def async_remove_entry(hass, entry) -> None:
 class AmpliPiType(Enum):
     """
         The amplipi type (source, zone, group, stream) of an amplipi entity\n
-        Stored in the _shared_state array under amplipi_type and used to filter against that same array and dict header
+        Stored in AmpliPiState.state under the amplipi_type header and used to filter against that same array and dict header
     """
     STREAM = "stream"
     SOURCE = "source"
@@ -103,7 +108,7 @@ class AmpliPiType(Enum):
 
 class AmpliPiStateEntry(BaseModel):
     """
-        Schema for the _shared_state data for AmpliPi home assistant entities\n
+        Schema for AmpliPiState.state\n
         Contains a mapping between the default name and id to the user-given name and id, as well as the amplipi type
     """
     original_name: str
@@ -111,6 +116,57 @@ class AmpliPiStateEntry(BaseModel):
     friendly_name: str
     entity_id: str
     amplipi_type: AmpliPiType
+
+
+class AmpliPiState():
+    """
+        A state repository that records the default as well as user given names and ids of entities as well as their amplipi type (source, stream, zone, group) and provides functions to record and look up said entries\n
+        There should only be one instance of this class passed from a parent context down to all relevant entities to ensure that the shared state is truly shared.
+    """
+    def __init__(self):
+        # Used to share mappings of user assigned names and ids with the original default names and ids provided by this integration
+        self.state: list[AmpliPiStateEntry] = []
+
+
+    def update_state_entry(self, hass, entry: AmpliPiStateEntry):
+        """
+            Look up self in hass.states and record relevant states to state array\n
+            Cannot be invoked during __init__ of child classes as self.hass hasn't been instantiated until after __init__ completes, and so is generally called during the state polling function.
+        """
+        # hass is the home assistant object, only bestowed on entities
+        # Given that this class isn't an entity, borrow it from above to get the one instance of data that the entities themselves aren't aware of
+        #
+        # Note that while AmpliPiMediaPlayers are MediaPlayerEntities which are themselves Entities,
+        # and Entity (the python class) has a function called self._friendly_name_internal(),
+        # that is the functional equivalent of calling for the name property in any of the AmpliPiMediaPlayer child classes
+
+        state = hass.states.get(entry.entity_id)
+        if state:
+            entry.friendly_name = state.attributes.get("friendly_name")
+
+            # Only update if there is new information
+            if self.get_entry_by_value(entry.unique_id) != entry:
+                self.state[:] = [
+                    e for e in self.state if e.unique_id != entry.unique_id
+                ]
+
+                self.state.append(entry)
+
+    def get_entry_by_value(self, value: str) -> Optional[AmpliPiStateEntry]:
+        """Find what dict within the state array has a given value and return said dict"""
+        for entry in self.state:
+            if value in entry.model_dump().values():
+                return entry
+        return None
+    
+    def get_entries_by_type(self, entry_type: AmpliPiType) -> Optional[list[AmpliPiStateEntry]]:
+        """Return all entries of a given amplipi_type"""
+        ret = []
+        for entry in self.state:
+            if entry.amplipi_type == entry_type:
+                ret.append(entry)
+        return ret if len(ret) > 0 else None
+
 
 class AmpliPiMediaPlayer(MediaPlayerEntity):
     """
@@ -155,47 +211,8 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
 
     # The displayname of the entity. Also what is passed to async_select_source via dropdown menus.
     _name: str
-    
-    # A single variable shared by all instances of AmpliPiMediaPlayer as received by async_setup_entry. Used to share mappings of user assigned names and ids with the original default names and ids provided by this integration
-    _shared_state: list[AmpliPiStateEntry]
 
-    def update_shared_state_entry(self, original_name: str):
-        """
-            Look up self in hass.states and record relevant states to shared_states array\n
-            Cannot be invoked during __init__ of child classes as self.hass hasn't been instantiated until after __init__ completes, and so is generally called during the state polling function.
-        """
-        state = self.hass.states.get(self.entity_id)
-        if state:
-            entry = AmpliPiStateEntry(
-                original_name=original_name,
-                unique_id=self._unique_id,
-                friendly_name=state.attributes.get("friendly_name"),
-                entity_id=self.entity_id,
-                amplipi_type=self._amplipi_type
-            )
-
-            # Only update if there is new information
-            if self.find_shared_entry_by_value(self._unique_id) != entry:
-                self._shared_state[:] = [
-                    e for e in self._shared_state if e.unique_id != self._unique_id
-                ]
-
-                self._shared_state.append(entry)
-
-    def find_shared_entry_by_value(self, value: str) -> Optional[AmpliPiStateEntry]:
-        """Find what dict within the shared_states array has a given value and return said dict"""
-        for entry in self._shared_state:
-            if value in entry.model_dump().values():
-                return entry
-        return None
-    
-    def find_shared_entries_by_type(self, entry_type: AmpliPiType) -> Optional[list[AmpliPiStateEntry]]:
-        """Return all entries of a given amplipi_type"""
-        ret = []
-        for entry in self._shared_state:
-            if entry.amplipi_type == entry_type:
-                ret.append(entry)
-        return ret if len(ret) > 0 else None
+    _amplipi_state: AmpliPiState
             
     def extract_amplipi_id_from_unique_id(self, uid: str) -> Optional[int]:
         """
@@ -221,11 +238,12 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
             # Excludes every RCA except for the one related to the given source
             RCAs = [996, 997, 998, 999]
             rca_selectable = RCAs[source.id]
-            for entity in self._shared_state:
-                if entity.amplipi_type == AmpliPiType.STREAM:
-                    amplipi_id = self.extract_amplipi_id_from_unique_id(entity.unique_id)
+            stream_entries = self._amplipi_state.get_entries_by_type(AmpliPiType.STREAM)
+            if stream_entries:
+                for entry in stream_entries:
+                    amplipi_id = self.extract_amplipi_id_from_unique_id(entry.unique_id)
                     if amplipi_id == rca_selectable or amplipi_id not in RCAs:
-                        streams.append(entity.friendly_name if entity.friendly_name not in [None, 'None'] else entity.original_name)
+                        streams.append(entry.friendly_name if entry.friendly_name not in [None, 'None'] else entry.original_name)
         return streams
     
     async def async_connect_stream_to_source(self, stream: Stream, source: Optional[Source] = None):
@@ -291,7 +309,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
 
     async def get_amplipi_entity(self, entity: str):
         """Take a name/id string, pull the full entry from shared state, and decode the entity's unique_id to find the related amplipi-side object"""
-        entry = self.find_shared_entry_by_value(entity)
+        entry = self._amplipi_state.get_entry_by_value(entity)
         if entry:
             state = await self._client.get_status()
 
@@ -452,9 +470,9 @@ class AmpliPiSource(AmpliPiMediaPlayer):
     """Representation of an AmpliPi Source Input, of which 4 are supported (Hard Coded)."""
 
     def __init__(self, namespace: str, source: Source, streams: List[Stream], vendor: str, version: str,
-                 image_base_path: str, client: AmpliPi, shared_state: list[AmpliPiStateEntry]):
+                 image_base_path: str, client: AmpliPi, amplipi_state: AmpliPiState):
         self._streams: List[Stream] = streams
-        self._shared_state = shared_state
+        self._amplipi_state = amplipi_state
         self._amplipi_type = AmpliPiType.SOURCE
         self._source = source
 
@@ -477,7 +495,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
     def get_original_name(self):
         """
             Stores the f-string of the default entity name schema\n
-            For use when naming the entity during __init__ and when populating _shared_state
+            For use when naming the entity during __init__ and when populating _amplipi_state.update_state_entry()
         """
         return f"Source {self._id + 1}"
 
@@ -600,7 +618,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             )
         else:
             # Process both the input and the known name in case the entity_id is sent back for processing
-            stream_hacs_entity = self.find_shared_entry_by_value(source)
+            stream_hacs_entity = self._amplipi_state.get_entry_by_value(source)
             stream_id = self.extract_amplipi_id_from_unique_id(stream_hacs_entity.unique_id)
             if stream_id is not None:
                 await self._client.set_source(
@@ -703,7 +721,14 @@ class AmpliPiSource(AmpliPiMediaPlayer):
 
         self._zones = zones
         self._groups = groups
-        self.update_shared_state_entry(self.get_original_name())
+        self._amplipi_state.update_state_entry(self.hass, 
+                                               AmpliPiStateEntry(
+                                                    original_name = self.get_original_name(),
+                                                    unique_id = self._unique_id,
+                                                    friendly_name = self.get_original_name(), # populated upstream, provide default for now
+                                                    entity_id = self.entity_id,
+                                                    amplipi_type = self._amplipi_type,
+                                                ))
         self._last_update_successful = True
 
         info = self._source.info
@@ -789,7 +814,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             if self._source.input == 'local':
                 return self._source.name
             elif self._current_stream is not None:
-                stream = self.find_shared_entry_by_value(self._current_stream.name)
+                stream = self._amplipi_state.get_entry_by_value(self._current_stream.name)
                 if stream:
                     return stream.friendly_name if stream.friendly_name not in [None, 'None'] else stream.original_name
         return 'None'
@@ -832,11 +857,11 @@ class AmpliPiZone(AmpliPiMediaPlayer):
     def __init__(self, namespace: str, zone, group,
                  streams: List[Stream], sources: List[Source],
                  vendor: str, version: str, image_base_path: str,
-                 client: AmpliPi, shared_state: list[AmpliPiStateEntry]):
+                 client: AmpliPi, amplipi_state: AmpliPiState):
         self._sources = sources
         self._split_group: bool = False
         self._domain = namespace
-        self._shared_state = shared_state
+        self._amplipi_state = amplipi_state
         self._zone = zone
         self._group = group
         self._name = self.get_original_name()
@@ -869,7 +894,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
     def get_original_name(self):
         """
             Stores the f-string of the default entity name schema\n
-            For use when naming the entity during __init__ and when populating _shared_state
+            For use when naming the entity during __init__ and when populating _amplipi_state.update_state_entry()
         """
         return self._group.name if self._group else self._zone.name
 
@@ -1043,7 +1068,14 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         self._sources = sources
         self._last_update_successful = True
         self._enabled = enabled
-        self.update_shared_state_entry(self.get_original_name())
+        self._amplipi_state.update_state_entry(self.hass, 
+                                               AmpliPiStateEntry(
+                                                    original_name = self.get_original_name(),
+                                                    unique_id = self._unique_id,
+                                                    friendly_name = self.get_original_name(), # populated upstream, provide default for now
+                                                    entity_id = self.entity_id,
+                                                    amplipi_type = self._amplipi_type,
+                                                ))
 
         info = None
         self._current_source = None
