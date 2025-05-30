@@ -92,7 +92,7 @@ async def async_remove_entry(hass, entry) -> None:
 
 class AmpliPiType(Enum):
     """
-        The amplipi type (source, zone, group, stream) of an amplipi entity
+        The amplipi type (source, zone, group, stream) of an amplipi entity\n
         Stored in the _shared_state array under amplipi_type and used to filter against that same array and dict header
     """
     STREAM = "stream"
@@ -103,7 +103,7 @@ class AmpliPiType(Enum):
 
 class AmpliPiStateEntry(BaseModel):
     """
-        Schema for the _shared_state data for AmpliPi home assistant entities
+        Schema for the _shared_state data for AmpliPi home assistant entities\n
         Contains a mapping between the default name and id to the user-given name and id, as well as the amplipi type
     """
     original_name: str
@@ -161,7 +161,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
 
     def update_shared_state_entry(self, original_name: str):
         """
-            Look up self in hass.states and record relevant states to shared_states array
+            Look up self in hass.states and record relevant states to shared_states array\n
             Cannot be invoked during __init__ of child classes as self.hass hasn't been instantiated until after __init__ completes, and so is generally called during the state polling function.
         """
         state = self.hass.states.get(self.entity_id)
@@ -199,10 +199,10 @@ class AmpliPiMediaPlayer(MediaPlayerEntity):
             
     def extract_amplipi_id_from_unique_id(self, uid: str) -> Optional[int]:
         """
-            Extracts all digits from a string and returns them
-            Useful for getting amplipi-side ids out of entity unique_ids due to the unique_id being formatted as "media_player.amplipi_{stream, group, zone, or source}_{amplipi-side id}"
-            Examples:
-            media_player.amplipi_stream_1000
+            Extracts all digits from a string and returns them\n
+            Useful for getting amplipi-side ids out of entity unique_ids due to the unique_id being formatted as "media_player.amplipi_{stream, group, zone, or source}_{amplipi-side id}"\n
+            Examples:\n
+            media_player.amplipi_stream_1000\n
             media_player.amplipi_source_0
         """
         match = re.search(r"\d+", uid)
@@ -475,6 +475,10 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         self._attr_device_class = MediaPlayerDeviceClass.RECEIVER
 
     def get_original_name(self):
+        """
+            Stores the f-string of the default entity name schema\n
+            For use when naming the entity during __init__ and when populating _shared_state
+        """
         return f"Source {self._id + 1}"
 
     async def async_toggle(self):
@@ -863,6 +867,10 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         self._attr_device_class = MediaPlayerDeviceClass.SPEAKER
 
     def get_original_name(self):
+        """
+            Stores the f-string of the default entity name schema\n
+            For use when naming the entity during __init__ and when populating _shared_state
+        """
         return self._group.name if self._group else self._zone.name
 
     async def async_toggle(self):
