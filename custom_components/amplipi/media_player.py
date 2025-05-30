@@ -80,16 +80,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         AmpliPiZone(DOMAIN, None, group, status.streams, status.sources, vendor, version, image_base_path, amplipi, amplipi_state)
         for group in status.groups]
 
-    streams: list[MediaPlayerEntity] = [
-        AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi, amplipi_state)
-        for stream in status.streams
-    ]
-
     announcer: list[MediaPlayerEntity] = [
         AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi)
     ]
 
-    async_add_entities(sources + zones + groups + streams + announcer)
+    async_add_entities(sources + zones + groups + announcer)
 
 
 async def async_remove_entry(hass, entry) -> None:
