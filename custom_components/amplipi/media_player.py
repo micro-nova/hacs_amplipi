@@ -81,7 +81,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         for group in status.groups]
 
     streams: list[MediaPlayerEntity] = [
-        AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi, shared_state)
+        AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi, amplipi_state)
         for stream in status.streams
     ]
 
@@ -1383,7 +1383,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     def __init__(self, namespace: str, stream: Stream,
                  sources: List[Source],
                  vendor: str, version: str, image_base_path: str,
-                 client: AmpliPi, shared_state: list[AmpliPiStateEntry]):
+                 client: AmpliPi, amplipi_state: AmpliPiState):
         self._stream: Stream = stream
         self._current_stream = self._stream # Make an alias for use with inherited functions while keeping local verbiage more correct
         self._current_source = None
@@ -1391,7 +1391,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         self._current_groups: List[Group] = []
         self._sources = sources
         self._domain = namespace
-        self._shared_state = shared_state
+        self._amplipi_state = amplipi_state
         self._amplipi_type = AmpliPiType.STREAM
 
         self._id = stream.id
@@ -1563,7 +1563,14 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         self._last_update_successful = True
         self._current_zones = zones
         self._current_groups = groups
-        self.update_shared_state_entry(self._stream.name)
+        self._amplipi_state.update_state_entry(self.hass, 
+                                               AmpliPiStateEntry(
+                                                    original_name = self._stream.name,
+                                                    unique_id = self._unique_id,
+                                                    friendly_name = self._stream.name, # populated upstream, provide default for now
+                                                    entity_id = self.entity_id,
+                                                    amplipi_type = self._amplipi_type,
+                                                ))
 
         info = None
 
@@ -1646,7 +1653,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                 if isinstance(amplipi_entity, Source):
                     await self.async_connect_stream_to_source(self._stream, amplipi_entity)
                 else:
-                    entry = self.find_shared_entry_by_value(source)
+                    entry = self._amplipi_state.get_entry_by_value(source)
                     if entry:
                         entry_id = self.extract_amplipi_id_from_unique_id(entry.unique_id)
                         if isinstance(amplipi_entity, Zone):
