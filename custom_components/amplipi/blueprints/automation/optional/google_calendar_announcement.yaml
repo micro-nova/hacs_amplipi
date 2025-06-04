@@ -13,7 +13,6 @@ blueprint:
       selector:
         number:
           min: 1
-          max: 60
           step: 1
           unit_of_measurement: minutes
           mode: slider
