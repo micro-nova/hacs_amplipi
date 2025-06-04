@@ -20,14 +20,14 @@ blueprint:
       selector:
         boolean:
 
-variables:
-  amplipi_announce_entity: >
-    {% set entity = states.media_player
-      | selectattr('attributes.app_name', 'eq', 'AmpliPi Announcement Channel')
-      | map(attribute='entity_id')
-      | list
-      | first %}
-    {{ entity }}
+  variables:
+    amplipi_announce_entity: >
+      {% set entity = states.media_player
+        | selectattr('attributes.app_name', 'eq', 'AmpliPi Announcement Channel')
+        | map(attribute='entity_id')
+        | list
+        | first %}
+      {{ entity }}
 
 mode: single
 
