@@ -1,6 +1,7 @@
 blueprint:
   name: "AmpliPi + Google Calendar: Announce Upcoming Calendar Event"
   description: "Announces upcoming calendar events over the AmpliPi Announcement Channel."
+  source_url: https://github.com/micro-nova/hacs_amplipi/blob/main/custom_components/amplipi/blueprints/automation/optional/google_calendar_announcement.yaml
   domain: automation
   author: Micro-Nova
 
