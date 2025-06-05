@@ -84,16 +84,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         AmpliPiZone(data_coordinator, DOMAIN, None, group, status.streams, status.sources, vendor, version, image_base_path, amplipi, amplipi_state)
         for group in status.groups]
 
-    streams: list[AmpliPiMediaPlayer] = [
-        AmpliPiStream(data_coordinator, DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi, amplipi_state)
-        for stream in status.streams
-    ]
-
     announcer: list[MediaPlayerEntity] = [
         AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi)
     ]
 
-    async_add_entities(sources + zones + groups + streams + announcer)
+    async_add_entities(sources + zones + groups + announcer)
 
 
 async def async_remove_entry(hass, entry) -> None:
@@ -288,7 +283,6 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
                     input=f'stream={stream.id}'
                 )
             )
-            
             return source_id
     
     async def async_connect_zones_to_source(self, source: Source, zones: Optional[List[int]], groups: Optional[List[int]]):
@@ -413,27 +407,22 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     async def async_media_play(self):
         if self._current_stream is not None:
             await self._client.play_stream(self._current_stream.id)
-        
 
     async def async_media_stop(self):
         if self._current_stream is not None:
             await self._client.stop_stream(self._current_stream.id)
-        
 
     async def async_media_pause(self):
         if self._current_stream is not None:
             await self._client.pause_stream(self._current_stream.id)
-        
 
     async def async_media_previous_track(self):
         if self._current_stream is not None:
             await self._client.previous_stream(self._current_stream.id)
-        
 
     async def async_media_next_track(self):
         if self._current_stream is not None:
             await self._client.next_stream(self._current_stream.id)
-        
 
     @property
     def available(self):
@@ -534,7 +523,6 @@ class AmpliPiSource(AmpliPiMediaPlayer):
                 )
             )
             self._is_off = True
-            
 
     async def async_mute_volume(self, mute):
         if mute is None:
@@ -634,7 +622,6 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             else:
                 _LOGGER.warning(f'Select Source {source} called but a match could not be found in the stream cache, '
                                 f'{self._streams}')
-        
 
     def clear_playlist(self):
         pass
@@ -824,20 +811,17 @@ class AmpliPiSource(AmpliPiMediaPlayer):
 
     async def _update_source(self, update: SourceUpdate):
         await self._client.set_source(self._source.id, update)
-        
 
     async def _update_zones(self, update: MultiZoneUpdate):
         # zones = await self._client.get_zones()
         # associated_zones = filter(lambda z: z.source_id == self._source.id, zones)
         await self._client.set_zones(update)
-        
 
     async def _update_groups(self, update: GroupUpdate):
         groups = await self._client.get_groups()
         associated_groups = filter(lambda g: g.source_id == self._source.id, groups)
         for group in associated_groups:
             await self._client.set_group(group.id, update)
-        
 
     @property
     def extra_state_attributes(self):
@@ -1201,11 +1185,9 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
     async def _update_zone(self, update: ZoneUpdate):
         await self._client.set_zone(self._id, update)
-        
 
     async def _update_group(self, update: MultiZoneUpdate):
         await self._client.set_zones(update)
-        
 
     @property
     def source_list(self):
@@ -1551,69 +1533,70 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for stream {self._id}')
-        groups = []
-        zones = []
+        if state is not None:
+            groups = []
+            zones = []
 
-        try:
-            state = self.coordinator.data
-            stream = next(filter(lambda s: s.id == self._id, state.streams), None)
-            if stream is not None:
-                current_source = next((s for s in state.sources if s.input == f"stream={stream.id}"), None)
-                if current_source is not None:
-                    groups = [group for group in state.groups if group.source_id == current_source.id]
-                    zones = [zone for zone in state.zones if zone.source_id == current_source.id]
-            else:
+            try:
+                state = self.coordinator.data
+                stream = next(filter(lambda s: s.id == self._id, state.streams), None)
+                if stream is not None:
+                    current_source = next((s for s in state.sources if s.input == f"stream={stream.id}"), None)
+                    if current_source is not None:
+                        groups = [group for group in state.groups if group.source_id == current_source.id]
+                        zones = [zone for zone in state.zones if zone.source_id == current_source.id]
+                else:
+                    self._last_update_successful = False
+                    return
+            except Exception as e:
                 self._last_update_successful = False
+                _LOGGER.error(f'Could not update stream {self._id} due to error: {e}')
                 return
-        except Exception as e:
-            self._last_update_successful = False
-            _LOGGER.error(f'Could not update stream {self._id} due to error: {e}')
-            return
 
 
-        if self._current_source is not None:
-            self._extra_attributes = {"amplipi_source_id" : self._current_source.id }
-        else:
-            self._extra_attributes = {"amplipi_source_id" : None }
+            if self._current_source is not None:
+                self._extra_attributes = {"amplipi_source_id" : self._current_source.id }
+            else:
+                self._extra_attributes = {"amplipi_source_id" : None }
 
-        self._available = self._stream is not None
+            self._available = self._stream is not None
 
-        self._stream = stream
-        self._sources = state.sources
-        self._current_source = current_source
-        if current_source: # Cannot be off while connected, but can be on while disconnected
-            self._is_off = False
-        self._last_update_successful = True
-        self._current_zones = zones
-        self._current_groups = groups
-        self._amplipi_state.update_state_entry(self.hass, 
-                                               AmpliPiStateEntry(
-                                                    original_name = self._stream.name,
-                                                    unique_id = self._unique_id,
-                                                    friendly_name = self._stream.name, # populated upstream, provide default for now
-                                                    entity_id = self.entity_id,
-                                                    amplipi_type = self._amplipi_type,
-                                                ))
+            self._stream = stream
+            self._sources = state.sources
+            self._current_source = current_source
+            if current_source: # Cannot be off while connected, but can be on while disconnected
+                self._is_off = False
+            self._last_update_successful = True
+            self._current_zones = zones
+            self._current_groups = groups
+            self._amplipi_state.update_state_entry(self.hass, 
+                                                   AmpliPiStateEntry(
+                                                        original_name = self._stream.name,
+                                                        unique_id = self._unique_id,
+                                                        friendly_name = self._stream.name, # populated upstream, provide default for now
+                                                        entity_id = self.entity_id,
+                                                        amplipi_type = self._amplipi_type,
+                                                    ))
 
-        info = None
+            info = None
 
-        if self._current_source is not None:
-            info = self._current_source.info
+            if self._current_source is not None:
+                info = self._current_source.info
 
-        if info is not None:
-            self._attr_media_album_artist = info.artist
-            self._attr_media_album_name = info.album
-            self._attr_media_title = info.name
-            self._attr_media_track = info.track
-            self._attr_media_image_url = self.build_url(info.img_url)
-            self._attr_media_channel = info.station
-        else:
-            self._attr_media_album_artist = None
-            self._attr_media_album_name = None
-            self._attr_media_title = None
-            self._attr_media_track = None
-            self._attr_media_image_url = None
-            self._attr_media_channel = None
+            if info is not None:
+                self._attr_media_album_artist = info.artist
+                self._attr_media_album_name = info.album
+                self._attr_media_title = info.name
+                self._attr_media_track = info.track
+                self._attr_media_image_url = self.build_url(info.img_url)
+                self._attr_media_channel = info.station
+            else:
+                self._attr_media_album_artist = None
+                self._attr_media_album_name = None
+                self._attr_media_title = None
+                self._attr_media_track = None
+                self._attr_media_image_url = None
+                self._attr_media_channel = None
 
     @property
     def state(self):
