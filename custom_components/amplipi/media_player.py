@@ -1538,12 +1538,12 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for stream {self._id}')
+        state = self.coordinator.data
         if state is not None:
             groups = []
             zones = []
 
             try:
-                state = self.coordinator.data
                 stream = next(filter(lambda s: s.id == self._id, state.streams), None)
                 if stream is not None:
                     current_source = next((s for s in state.sources if s.input == f"stream={stream.id}"), None)
