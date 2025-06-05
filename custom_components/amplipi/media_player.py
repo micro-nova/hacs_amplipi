@@ -144,12 +144,13 @@ class AmpliPiState():
             entry.friendly_name = state.attributes.get("friendly_name")
 
             # Only update if there is new information
-            if self.get_entry_by_value(entry.unique_id) != entry:
-                self.state[:] = [
-                    e for e in self.state if e.unique_id != entry.unique_id
-                ]
+            for i, existing_entry in enumerate(self.state):
+                if existing_entry.unique_id == entry.unique_id:
+                    if existing_entry != entry:
+                        self.state[i] = entry 
+                    return
 
-                self.state.append(entry)
+            self.state.append(entry)
 
     def get_entry_by_value(self, value: str) -> Optional[AmpliPiStateEntry]:
         """Find what dict within the state array has a given value and return said dict"""
