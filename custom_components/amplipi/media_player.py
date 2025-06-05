@@ -7,10 +7,9 @@ from functools import reduce
 from typing import List, Optional
 from enum import Enum
 from pydantic import BaseModel
-from datetime import timedelta
 
 import validators
-from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components import media_source, persistent_notification
 from homeassistant.components.media_player import MediaPlayerDeviceClass, MediaPlayerEntity, MediaPlayerEntityFeature, MediaType
 from homeassistant.components.media_player.browse_media import (
@@ -22,6 +21,7 @@ from pyamplipi.amplipi import AmpliPi
 from pyamplipi.models import ZoneUpdate, Source, SourceUpdate, GroupUpdate, Stream, Group, Zone, Announcement, \
     MultiZoneUpdate, PlayMedia
 
+from .coordinator import AmpliPiCoordinator
 from .const import (
     DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, )
 
@@ -58,31 +58,6 @@ _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 1
 
-class AmpliPiCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass, config_entry, my_api):
-        super().__init__(
-            hass,
-            _LOGGER,
-            config_entry=config_entry,
-            name="hacs_amplipi",
-            update_interval=timedelta(seconds=2),
-            always_update=True
-        )
-        self.api = my_api
-
-    async def _async_update_data(self):
-        """Fetch data from API endpoint.
-
-        This is the place to pre-process the data to lookup tables
-        so entities can quickly look up their data.
-        """
-        try:
-            state = await self.api.get_status()
-            return state
-        except Exception as e:
-            raise UpdateFailed(f"Error fetching data: {e}")
-
-
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the AmpliPi MultiZone Audio Controller"""
     hass_entry = hass.data[DOMAIN][config_entry.entry_id]
@@ -94,7 +69,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     version = hass_entry[CONF_VERSION]
     image_base_path = f'{hass_entry[CONF_WEBAPP]}'
 
-    data_coordinator = AmpliPiCoordinator(hass, config_entry, amplipi)
+    data_coordinator = AmpliPiCoordinator(hass, _LOGGER, config_entry, amplipi)
 
     status = await amplipi.get_status()
     sources: list[AmpliPiMediaPlayer] = [
