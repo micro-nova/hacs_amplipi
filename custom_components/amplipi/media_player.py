@@ -679,65 +679,65 @@ class AmpliPiSource(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for source {self._source.id}')
+        state = self.coordinator.data
+        if state is not None:
+            try:
+                source = next(filter(lambda z: z.id == self._source.id, state.sources), None)
+                streams = state.streams
+            except Exception:
+                self._last_update_successful = False
+                _LOGGER.error(f'Could not update source {self._source.id}')
+                return
 
-        try:
-            state = self.coordinator.data
-            source = next(filter(lambda z: z.id == self._source.id, state.sources), None)
-            streams = state.streams
-        except Exception:
-            self._last_update_successful = False
-            _LOGGER.error(f'Could not update source {self._source.id}')
-            return
+            if not source:
+                self._last_update_successful = False
+                return
 
-        if not source:
-            self._last_update_successful = False
-            return
+            self._source = source
+            self._streams = streams
+            self._current_stream = None
 
-        self._source = source
-        self._streams = streams
-        self._current_stream = None
+            if 'stream=' in source.input and 'stream=local' not in source.input and self._streams is not None:
+                stream_id = int(self._source.input.split('=')[1])
+                self._current_stream = next(filter(lambda s: s.id == stream_id, self._streams), None)
 
-        if 'stream=' in source.input and 'stream=local' not in source.input and self._streams is not None:
-            stream_id = int(self._source.input.split('=')[1])
-            self._current_stream = next(filter(lambda s: s.id == stream_id, self._streams), None)
+            self._zones = list(filter(lambda z: z.source_id == self._source.id, state.zones))
+            self._groups = list(filter(lambda z: z.source_id == self._source.id, state.groups))
+            self._amplipi_state.update_state_entry(self.hass, 
+                                                   AmpliPiStateEntry(
+                                                        original_name = self.get_original_name(),
+                                                        unique_id = self._unique_id,
+                                                        friendly_name = self.get_original_name(), # populated upstream, provide default for now
+                                                        entity_id = self.entity_id,
+                                                        amplipi_type = self._amplipi_type,
+                                                    ))
+            self._last_update_successful = True
 
-        self._zones = list(filter(lambda z: z.source_id == self._source.id, state.zones))
-        self._groups = list(filter(lambda z: z.source_id == self._source.id, state.groups))
-        self._amplipi_state.update_state_entry(self.hass, 
-                                               AmpliPiStateEntry(
-                                                    original_name = self.get_original_name(),
-                                                    unique_id = self._unique_id,
-                                                    friendly_name = self.get_original_name(), # populated upstream, provide default for now
-                                                    entity_id = self.entity_id,
-                                                    amplipi_type = self._amplipi_type,
-                                                ))
-        self._last_update_successful = True
+            info = self._source.info
 
-        info = self._source.info
+            if info is not None:
+                track_name = info.track
+                if track_name is None:
+                    track_name = info.name
 
-        if info is not None:
-            track_name = info.track
-            if track_name is None:
-                track_name = info.name
-
-            self._attr_media_album_artist = info.artist
-            self._attr_media_album_name = info.album
-            self._attr_media_title = track_name
-            self._attr_media_track = info.track
-            if self._current_stream is not None:
-                self._attr_app_name = self._current_stream.type
+                self._attr_media_album_artist = info.artist
+                self._attr_media_album_name = info.album
+                self._attr_media_title = track_name
+                self._attr_media_track = info.track
+                if self._current_stream is not None:
+                    self._attr_app_name = self._current_stream.type
+                else:
+                    self._attr_app_name = None
+                self._attr_media_image_url = self.build_url(info.img_url)
+                self._attr_media_channel = info.station
             else:
+                self._attr_media_album_artist = None
+                self._attr_media_album_name = None
+                self._attr_media_title = None
+                self._attr_media_track = None
                 self._attr_app_name = None
-            self._attr_media_image_url = self.build_url(info.img_url)
-            self._attr_media_channel = info.station
-        else:
-            self._attr_media_album_artist = None
-            self._attr_media_album_name = None
-            self._attr_media_title = None
-            self._attr_media_track = None
-            self._attr_app_name = None
-            self._attr_media_image_url = None
-            self._attr_media_channel = None
+                self._attr_media_image_url = None
+                self._attr_media_channel = None
 
     @property
     def state(self):
@@ -1007,110 +1007,110 @@ class AmpliPiZone(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for source {self._id}')
+        state = self.coordinator.data
+        if state is not None:
+            zone = None
+            group = None
+            enabled = False
 
-        zone = None
-        group = None
-        enabled = False
+            try:
+                if self._group is not None:
+                    group: Group = next(filter(lambda z: z.id == self._id, state.groups), None)
+                    if not group:
+                        self._last_update_successful = False
+                        return
+                    any_enabled_zone = next(filter(lambda z: z.id in group.zones, state.zones), None)
 
-        try:
-            state = self.coordinator.data
+                    if any_enabled_zone is not None:
+                        enabled = True
+
+                    connected_sources = [state.zones[zone_index].source_id for zone_index in group.zones]
+                    # Is every zone connected to the same source?
+                    self._split_group = len(set(connected_sources)) != 1
+                else:
+                    zone = next(filter(lambda z: z.id == self._id, state.zones), None)
+                    if not zone:
+                        self._last_update_successful = False
+                        return
+                    enabled = not zone.disabled
+            except Exception:
+                self._last_update_successful = False
+                _LOGGER.error(f'Could not update {"group" if self._group is not None else "zone"} {self._id}')
+                return
+
             if self._group is not None:
-                group: Group = next(filter(lambda z: z.id == self._id, state.groups), None)
-                if not group:
-                    self._last_update_successful = False
-                    return
-                any_enabled_zone = next(filter(lambda z: z.id in group.zones, state.zones), None)
+                zone_ids = []
 
-                if any_enabled_zone is not None:
-                    enabled = True
-                
-                connected_sources = [state.zones[zone_index].source_id for zone_index in group.zones]
-                # Is every zone connected to the same source?
-                self._split_group = len(set(connected_sources)) != 1
+                for zone_id in self._group.zones:
+                    for state_zone in state.zones:
+                        if state_zone.id == zone_id and not state_zone.disabled:
+                            zone_ids.append(zone_id)
+                self._extra_attributes = {"amplipi_zones" : zone_ids}
+
+                #if self._zone_num_cache != len(zone_ids):
+                    #self.hass.bus.fire("group_change_event", {"group_change": True})
             else:
-                zone = next(filter(lambda z: z.id == self._id, state.zones), None)
-                if not zone:
-                    self._last_update_successful = False
-                    return
-                enabled = not zone.disabled
-        except Exception:
-            self._last_update_successful = False
-            _LOGGER.error(f'Could not update {"group" if self._group is not None else "zone"} {self._id}')
-            return
+                self._extra_attributes = {"amplipi_zone_id" : self._zone.id}
 
-        if self._group is not None:
-            zone_ids = []
 
-            for zone_id in self._group.zones:
-                for state_zone in state.zones:
-                    if state_zone.id == zone_id and not state_zone.disabled:
-                        zone_ids.append(zone_id)
-            self._extra_attributes = {"amplipi_zones" : zone_ids}
+            if self._group is not None:
+                for zone_id in self._group.zones:
+                    for state_zone in state.zones:
+                        if state_zone.id == zone_id and not state_zone.disabled:
+                            self._available = True
+                self._available = False
+            elif self._zone is None or self._zone.disabled:
+                self._available = False
+            self._available = True
 
-            #if self._zone_num_cache != len(zone_ids):
-                #self.hass.bus.fire("group_change_event", {"group_change": True})
-        else:
-            self._extra_attributes = {"amplipi_zone_id" : self._zone.id}
-        
+            self._zone = zone
+            self._group = group
+            self._streams = state.streams
+            self._sources = state.sources
+            self._last_update_successful = True
+            self._enabled = enabled
+            self._amplipi_state.update_state_entry(self.hass, 
+                                                   AmpliPiStateEntry(
+                                                        original_name = self.get_original_name(),
+                                                        unique_id = self._unique_id,
+                                                        friendly_name = self.get_original_name(), # populated upstream, provide default for now
+                                                        entity_id = self.entity_id,
+                                                        amplipi_type = self._amplipi_type,
+                                                    ))
 
-        if self._group is not None:
-            for zone_id in self._group.zones:
-                for state_zone in state.zones:
-                    if state_zone.id == zone_id and not state_zone.disabled:
-                        self._available = True
-            self._available = False
-        elif self._zone is None or self._zone.disabled:
-            self._available = False
-        self._available = True
+            info = None
+            self._current_source = None
 
-        self._zone = zone
-        self._group = group
-        self._streams = state.streams
-        self._sources = state.sources
-        self._last_update_successful = True
-        self._enabled = enabled
-        self._amplipi_state.update_state_entry(self.hass, 
-                                               AmpliPiStateEntry(
-                                                    original_name = self.get_original_name(),
-                                                    unique_id = self._unique_id,
-                                                    friendly_name = self.get_original_name(), # populated upstream, provide default for now
-                                                    entity_id = self.entity_id,
-                                                    amplipi_type = self._amplipi_type,
-                                                ))
+            # When a zone is off it connects to source_id -2, groups also yield the source_id that all requisite zones are already connected to
+            if self._group is not None:
+                self._current_source = next(filter(lambda s: self._group.source_id == s.id, state.sources), None)
+                self._is_off = self._group.source_id == -2
 
-        info = None
-        self._current_source = None
+            elif self._zone.source_id is not None:
+                self._current_source = next(filter(lambda s: self._zone.source_id == s.id, state.sources), None)
+                self._is_off = self._zone.source_id == -2
 
-        # When a zone is off it connects to source_id -2, groups also yield the source_id that all requisite zones are already connected to
-        if self._group is not None:
-            self._current_source = next(filter(lambda s: self._group.source_id == s.id, state.sources), None)
-            self._is_off = self._group.source_id == -2
-                
-        elif self._zone.source_id is not None:
-            self._current_source = next(filter(lambda s: self._zone.source_id == s.id, state.sources), None)
-            self._is_off = self._zone.source_id == -2
+            if self._current_source is not None:
+                info = self._current_source.info
 
-        if self._current_source is not None:
-            info = self._current_source.info
+            if self._current_source is not None and 'stream=' in self._current_source.input and 'stream=local' not in self._current_source.input:
+                stream_id = int(self._current_source.input.split('=')[1])
+                self._current_stream = next(filter(lambda z: z.id == stream_id, self._streams), None)
 
-        if self._current_source is not None and 'stream=' in self._current_source.input and 'stream=local' not in self._current_source.input:
-            stream_id = int(self._current_source.input.split('=')[1])
-            self._current_stream = next(filter(lambda z: z.id == stream_id, self._streams), None)
-
-        if info is not None:
-            self._attr_media_album_artist = info.artist
-            self._attr_media_album_name = info.album
-            self._attr_media_title = info.name
-            self._attr_media_track = info.track
-            self._attr_media_image_url = self.build_url(info.img_url)
-            self._attr_media_channel = info.station
-        else:
-            self._attr_media_album_artist = None
-            self._attr_media_album_name = None
-            self._attr_media_title = None
-            self._attr_media_track = None
-            self._attr_media_image_url = None
-            self._attr_media_channel = None
+            if info is not None:
+                self._attr_media_album_artist = info.artist
+                self._attr_media_album_name = info.album
+                self._attr_media_title = info.name
+                self._attr_media_track = info.track
+                self._attr_media_image_url = self.build_url(info.img_url)
+                self._attr_media_channel = info.station
+            else:
+                self._attr_media_album_artist = None
+                self._attr_media_album_name = None
+                self._attr_media_title = None
+                self._attr_media_track = None
+                self._attr_media_image_url = None
+                self._attr_media_channel = None
 
     @property
     def state(self):
