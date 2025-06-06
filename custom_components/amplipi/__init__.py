@@ -53,7 +53,7 @@ def copy_blueprints(hass: HomeAssistant):
     """Recursively copy all blueprints from the integration directory to Home Assistant's blueprints folder."""
     # Despite only having one blueprint thus far, I can envision a world where we'd want more
     source_dir = os.path.join(os.path.dirname(__file__), "blueprints", "automation")
-    dest_dir = os.path.join(hass.config.path("blueprints/automation/hacs_amplipi"))
+    dest_dir = os.path.join(hass.config.path("blueprints/automation/hacs_amplipi/default_installed"))
 
     if not os.path.exists(source_dir):
         return

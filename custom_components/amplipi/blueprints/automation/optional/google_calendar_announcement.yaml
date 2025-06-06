@@ -1,0 +1,67 @@
+blueprint:
+  name: "AmpliPi + Google Calendar: Announce Upcoming Calendar Event"
+  description: "Announces upcoming calendar events over the AmpliPi Announcement Channel."
+  source_url: https://github.com/micro-nova/hacs_amplipi/blob/main/custom_components/amplipi/blueprints/automation/optional/google_calendar_announcement.yaml
+  domain: automation
+  author: Micro-Nova
+
+  input:
+    minutes:
+      name: "Announcement Timing"
+      description: "How many minutes before the event should the announcement occur?"
+      default: 10
+      selector:
+        number:
+          min: 1
+          step: 1
+          unit_of_measurement: minutes
+          mode: slider
+
+    calendar:
+      name: "Calendar"
+      description: "Which calendar should be monitored for events?"
+      selector:
+        entity:
+          filter:
+            - domain: calendar
+
+variables:
+  amplipi_announce_entity: >
+    {% set entity = states.media_player
+      | selectattr('attributes.app_name', 'eq', 'AmpliPi Announcement Channel')
+      | map(attribute='entity_id')
+      | list
+      | first %}
+    {{ entity }}
+
+  calendar_entity: !input calendar
+
+  minutes: !input minutes
+
+trigger:
+  - platform: time_pattern
+    minutes: "/1"
+
+condition:
+  - condition: template
+    value_template: >
+      {% set event = state_attr(calendar_entity, 'start_time') %}
+      {% if event %}
+        {% set start = as_timestamp(event) %}
+        {% set now = as_timestamp(now()) %}
+        {{ (minutes - 1) * 60 <= (start - now) <= (minutes * 60) }} # Provide a one minute window just so that the automation doesn't have to coincidentally happen on the exact right second
+      {% else %}
+        false
+      {% endif %}
+
+action:
+  - service: tts.speak
+    data:
+      cache: false
+      media_player_entity_id: "{{ amplipi_announce_entity }}"
+      message: >
+        Upcoming event "{{ state_attr(calendar_entity, 'message') }}" starts in {{ minutes }} minutes.
+    target:
+      entity_id: tts.google_translate_en_com
+
+mode: single
