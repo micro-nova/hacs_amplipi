@@ -472,7 +472,6 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         self._streams: List[Stream] = streams
         self._amplipi_state = amplipi_state
         self._amplipi_type = AmpliPiType.SOURCE
-        self._extra_attributes["amplipi_type"] = AmpliPiType.SOURCE
         self._source = source
 
         self._id = source.id
@@ -809,8 +808,11 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         zone_list = []
         for zone in self._zones:
             zone_list.append(zone.id)
-        return {"amplipi_source_id" : self._id,
-                "amplipi_source_zones" : zone_list}
+        return {
+            "amplipi_type": self._amplipi_type.value,
+            "amplipi_source_id" : self._id,
+            "amplipi_source_zones" : zone_list
+            }
 
 class AmpliPiZone(AmpliPiMediaPlayer):
     """Representation of an AmpliPi Zone and/or Group. Supports Audio volume
@@ -834,12 +836,10 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             self._id = group.id
             self._unique_id = f"{namespace}_group_{self._id}"
             self._amplipi_type = AmpliPiType.GROUP
-            self._extra_attributes["amplipi_type"] = AmpliPiType.GROUP
         else:
             self._id = zone.id
             self._unique_id = f"{namespace}_zone_{self._id}"
             self._amplipi_type = AmpliPiType.ZONE
-            self._extra_attributes["amplipi_type"] = AmpliPiType.ZONE
 
         self.entity_id = f"media_player.{self._unique_id}"
         self._streams = streams
@@ -1021,21 +1021,6 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                 self._last_update_successful = False
                 _LOGGER.error(f'Could not update {"group" if self._group is not None else "zone"} {self._id}')
                 return
-
-            if self._group is not None:
-                zone_ids = []
-
-                for zone_id in self._group.zones:
-                    for state_zone in state.zones:
-                        if state_zone.id == zone_id and not state_zone.disabled:
-                            zone_ids.append(zone_id)
-                self._extra_attributes["amplipi_zones"] = zone_ids
-
-                #if self._zone_num_cache != len(zone_ids):
-                    #self.hass.bus.fire("group_change_event", {"group_change": True})
-            else:
-                self._extra_attributes["amplipi_zones"] = self._zone.id
-
 
             if self._group is not None:
                 for zone_id in self._group.zones:
@@ -1222,9 +1207,12 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
     @property
     def extra_state_attributes(self):
-        return self._extra_attributes
+        return {
+            "amplipi_type": self._amplipi_type.value,
+            "amplipi_zones": self._get_zone_ids()
+        }
 
-    async def _get_extra_attributes(self):
+    async def _get_zone_ids(self) -> List[int]:
         if self._group is not None:
             state = self.coordinator.data
             zone_ids = []
@@ -1233,12 +1221,12 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                 for state_zone in state.zones:
                     if state_zone.id == zone_id and not state_zone.disabled:
                         zone_ids.append(zone_id)
-            self._extra_attributes["amplipi_zones"] = zone_ids
+            return zone_ids
 
             #if self._zone_num_cache != len(zone_ids):
                 #self.hass.bus.fire("group_change_event", {"group_change": True})
         else:
-            self._extra_attributes["amplipi_zone_id"] = self._zone.id
+            return [self._zone.id]
 
     async def _update_available(self):
         state = self.coordinator.data
@@ -1272,7 +1260,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         self._client = client
         self._last_update_successful = True
         self._available = True
-        self._extra_attributes: List = []
+        self._extra_attributes: List = {}
         self._image_base_path = image_base_path
         self._name = "AmpliPi Announcement"
         self._volume = 0.5
@@ -1364,7 +1352,6 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         self._domain = namespace
         self._amplipi_state = amplipi_state
         self._amplipi_type = AmpliPiType.STREAM
-        self._extra_attributes["amplipi_type"] = AmpliPiType.STREAM
 
         self._id = stream.id
         self._name = stream.name
@@ -1503,12 +1490,6 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                 _LOGGER.error(f'Could not update stream {self._id} due to error: {e}')
                 return
 
-
-            if self._current_source is not None:
-                self._extra_attributes["amplipi_source_id"] = self._current_source.id 
-            else:
-                self._extra_attributes["amplipi_source_id"] = None
-
             self._available = self._stream is not None
 
             self._stream = stream
@@ -1626,13 +1607,10 @@ class AmpliPiStream(AmpliPiMediaPlayer):
 
     @property
     def extra_state_attributes(self):
-        return self._extra_attributes
-
-    async def _get_extra_attributes(self):
-        if self._current_source is not None:
-            self._extra_attributes["amplipi_source_id"] = self._current_source.id 
-        else:
-            self._extra_attributes["amplipi_source_id"] = None
+        return {
+            "amplipi_type": self._amplipi_type.value,
+            "amplipi_source_id": self._current_source.id if self._current_source is not None else None
+        }
 
     async def _update_available(self):
         if self._stream is None:
