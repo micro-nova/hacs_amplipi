@@ -484,6 +484,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
 
         # Aliased so that AmpliPiMediaPlayer functions know to use the same source while also using a variable name that doesn't imply that the source can change within a source entity
         self._current_source = self._source
+        self._attr_device_class = MediaPlayerDeviceClass.RECEIVER  # This somehow doesn't mark this entity as also being a device, and also provides necessary data for filtering in a blueprint entity selector
 
         self._client = client
         self._unique_id = f"{namespace}_source_{self._source.id}"
@@ -1381,6 +1382,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         self._available = False
         self._extra_attributes = []
         self._is_off: bool = True
+        self._attr_device_class = "stream"  # This somehow doesn't mark this entity as also being a device, and also provides necessary data for filtering in a blueprint entity selector
 
     async def _update_zones(self, update: ZoneUpdate):
         if self._current_source is not None:
