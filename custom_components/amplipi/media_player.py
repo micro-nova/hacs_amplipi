@@ -1212,7 +1212,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             "amplipi_zones": self._get_zone_ids()
         }
 
-    async def _get_zone_ids(self) -> List[int]:
+    def _get_zone_ids(self) -> List[int]:
         if self._group is not None:
             state = self.coordinator.data
             zone_ids = []
