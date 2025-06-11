@@ -4,7 +4,7 @@
 """
 from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from .models import Status, Source, Zone, Group
+from .models import Status, Source, Zone, Group, Stream
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from .const import DOMAIN
 
@@ -66,6 +66,11 @@ class AmpliPiCoordinator(DataUpdateCoordinator):
             state["groups"] = [
                 await build_entity(entity, "group", Group, entity["name"])
                 for entity in state["groups"]
+            ]
+
+            state["streams"] = [
+                await build_entity(entity, "stream", Stream, entity["name"])
+                for entity in state["streams"]
             ]
 
             return Status(**state)
