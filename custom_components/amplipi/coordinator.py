@@ -7,6 +7,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .models import Status, Source, Zone, Group, Stream
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from .const import DOMAIN
+from homeassistant.components import persistent_notification
+from typing import List
 
 class AmpliPiCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, logger, config_entry, api):
@@ -19,6 +21,7 @@ class AmpliPiCoordinator(DataUpdateCoordinator):
             always_update=True
         )
         self.api = api
+        self.shown_notifications: List = []
 
     async def get_friendly_name(self, entity_id):
         """Look up entity in hass.states and get the friendly name"""
@@ -72,6 +75,11 @@ class AmpliPiCoordinator(DataUpdateCoordinator):
                 await build_entity(entity, "stream", Stream, entity["name"])
                 for entity in state["streams"]
             ]
+
+            notification_id = f"{state['info']['latest_release']}_update_available"
+            if state["info"]['version'] != state["info"]['latest_release'] and notification_id not in self.shown_notifications:
+                self.shown_notifications.append(notification_id)
+                persistent_notification.create(self.hass, f"{state['info']['latest_release']} now available in the AmpliPi app!", f"AmpliPi update {state['info']['latest_release']} available", notification_id)
 
             return Status(**state)
 
