@@ -6,20 +6,24 @@ from homeassistant.const import CONF_HOST, CONF_PORT, CONF_NAME, CONF_ID
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pyamplipi.amplipi import AmpliPi
+from .coordinator import AmpliPiCoordinator
 
-from .const import DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, CONF_API_PATH
+from .const import DOMAIN, AMPLIPI_OBJECT, UPDATER_URL, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, CONF_API_PATH, COORDINATOR
 
-PLATFORMS = ["media_player"]
+PLATFORMS = ["media_player", "update"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
-        AMPLIPI_OBJECT: AmpliPi(
+    AmpliPiObject = AmpliPi(
             f'http://{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}/api/',
             10,
             http_session=async_get_clientsession(hass)
-        ),
+        )
+    data_coordinator = AmpliPiCoordinator(hass=hass, config_entry=entry, api=AmpliPiObject)
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+        AMPLIPI_OBJECT: AmpliPiObject,
+        UPDATER_URL: f'http://{entry.data[CONF_HOST]}:5001',
         CONF_VENDOR: entry.data[CONF_VENDOR],
         CONF_NAME: entry.data[CONF_NAME],
         CONF_HOST: entry.data[CONF_HOST],
@@ -28,6 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CONF_VERSION: entry.data[CONF_VERSION],
         CONF_WEBAPP: entry.data[CONF_WEBAPP],
         CONF_API_PATH: entry.data[CONF_API_PATH],
+        COORDINATOR: data_coordinator,
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
