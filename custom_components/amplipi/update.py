@@ -41,6 +41,7 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
     def installed_version(self):
         if self.coordinator.data is not None:
             return getattr(self.coordinator.data.status.info, "version", None)
+        return None
 
     @property
     def latest_version(self):
@@ -101,10 +102,23 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
             async with aiohttp.ClientSession() as session:
                 async with session.get(f"{self._updater_url}/update/install/progress") as resp:
                     async for line in resp.content:
+                        # Example lines:
+                        # b'data: {"message": "starting installation", "type": "info"}\r\n'
+                        # b'\r\n'
+                        # b'data: {"message": "Got amplipi release: micro-nova-AmpliPi-ffcec58", "type": "info"}\r\n'
+                        # b'\r\n'
+                        # b'event: ping\r\n'
+                        # b'data: 2025-06-19 14:28:19.371839\r\n'
                         if line.startswith(b"data:"):
                             data_json = line[len(b"data:"):].strip()
                             data = json.loads(data_json.decode("utf-8"))
-                            self._LOGGER.debug(data)
+
+                            self._LOGGER.info("Update data:")
+                            if data.get("type") == "info":
+                                self._LOGGER.info(data)
+                            else:
+                                self._LOGGER.debug(data)
+
                             if data.get("type") in ("success", "failed"):
                                 if data["type"] == "success":
                                     session.post(f"{self._updater_url}/update/restart", timeout=aiohttp.ClientTimeout(total=1000))
@@ -138,7 +152,6 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
             self._LOGGER.error(f"Update failed due to error: {e}")
         finally:
             self.in_progress = False
-
 
     async def async_release_notes(self):
         return self.release_summary
