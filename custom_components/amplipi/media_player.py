@@ -371,7 +371,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
 
     @property
     def unique_id(self):
-        """Return unique ID for this device."""
+        """Return unique ID for this entity."""
         return self._unique_id
     
     @property
@@ -573,31 +573,6 @@ class AmpliPiSource(AmpliPiMediaPlayer):
     def media_content_type(self):
         """Content type of current playing media."""
         return MediaType.MUSIC
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info for this device."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.unique_id)},
-            model="AmpliPi MultiZone Source",
-            name=self._name,
-            manufacturer=self._vendor,
-            sw_version=self._version,
-            configuration_url=self._image_base_path,
-        )
-
-    # name: str | None
-    # connections: set[tuple[str, str]]
-    # identifiers: set[tuple[str, str]]
-    # manufacturer: str | None
-    # model: str | None
-    # suggested_area: str | None
-    # sw_version: str | None
-    # via_device: tuple[str, str]
-    # entry_type: str | None
-    # default_name: str
-    # default_manufacturer: str
-    # default_model: str
 
     def sync_state(self):
         """Retrieve latest state."""
@@ -1158,7 +1133,6 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         self._image_base_path = image_base_path
         self._name = "AmpliPi Announcement"
         self._volume = 0.5
-        self._attr_device_class = MediaPlayerDeviceClass.SPEAKER
 
     @property
     def available(self):
@@ -1180,26 +1154,12 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         return True
 
     @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info for this device."""
-        model = "AmpliPi Announcement Channel"
-
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.unique_id)},
-            model=model,
-            name=self._name,
-            manufacturer=self._vendor,
-            sw_version=self._version,
-            configuration_url=self._image_base_path
-        )
-
-    @property
     def volume_level(self):
         return self._volume
 
     @property
     def unique_id(self):
-        """Return unique ID for this device."""
+        """Return unique ID for this entity."""
         return self._unique_id
 
     @property
@@ -1265,6 +1225,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         self._unique_id = stream.unique_id
         self.entity_id = stream.entity_id
         # not a real device class, but allows us to match streams and only streams with the start_streaming blueprint's streams dropdown
+        # note that device class doesn't actually define an entity as a device and is just a specific header to filter by
         self._attr_device_class = "stream"
         
         self._image_base_path = image_base_path
@@ -1375,23 +1336,6 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     def media_content_type(self):
         """Content type of current playing media."""
         return "speaker"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info for this device."""
-        via_device = None
-        if self._current_source is not None:
-            via_device = (DOMAIN, f"{DOMAIN}_source_{self._current_source.id}")
-
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.unique_id)},
-            model="AmpliPi Stream",
-            name=self._name,
-            manufacturer=self._vendor,
-            sw_version=self._version,
-            configuration_url=self._image_base_path,
-            via_device=via_device,
-        )
 
     def sync_state(self):
         """Retrieve latest state."""
