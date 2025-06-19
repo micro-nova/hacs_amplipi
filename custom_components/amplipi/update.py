@@ -41,7 +41,6 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
     def installed_version(self):
         if self.coordinator.data is not None:
             return getattr(self.coordinator.data.status.info, "version", None)
-        return None
 
     @property
     def latest_version(self):
@@ -105,10 +104,12 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
                         if line.startswith(b"data:"):
                             data_json = line[len(b"data:"):].strip()
                             data = json.loads(data_json.decode("utf-8"))
-                            self._LOGGER.warning(data)
+                            self._LOGGER.debug(data)
                             if data.get("type") in ("success", "failed"):
                                 if data["type"] == "success":
                                     session.post(f"{self._updater_url}/update/restart", timeout=aiohttp.ClientTimeout(total=1000))
+                                else:
+                                    raise Exception(f"Update failed! {data}")
                                 break
 
         self.in_progress = True
