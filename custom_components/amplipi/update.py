@@ -109,22 +109,26 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
                         # b'\r\n'
                         # b'event: ping\r\n'
                         # b'data: 2025-06-19 14:28:19.371839\r\n'
-                        if line.startswith(b"data:"):
-                            data_json = line[len(b"data:"):].strip()
-                            data = json.loads(data_json.decode("utf-8"))
+                        previous_line_message = "first line"
+                        decoded_line = line.decode("utf-8")
+                        if "message" in decoded_line:
+                            data_json = decoded_line[len("data: "):].strip()
+                            data = json.loads(data_json)
 
-                            self._LOGGER.info("Update data:")
-                            if data.get("type") == "info":
-                                self._LOGGER.info(data)
-                            else:
-                                self._LOGGER.debug(data)
+                            if data["message"] != "  ":
+                                if data["type"] == "info":
+                                    # It might seem odd to make something literally labeled info be printed as not info level, but this is very loud
+                                    self._LOGGER.debug(data["message"])
+                                else:
+                                    self._LOGGER.info(data["message"])
 
-                            if data.get("type") in ("success", "failed"):
+                            if data["type"] in ("success", "failed"):
                                 if data["type"] == "success":
                                     session.post(f"{self._updater_url}/update/restart", timeout=aiohttp.ClientTimeout(total=1000))
                                 else:
-                                    raise Exception(f"Update failed! {data}")
+                                    raise Exception(f"Update failed on: {previous_line_message}")
                                 break
+                            previous_line_message = data["message"]
 
         self.in_progress = True
         try:
@@ -137,14 +141,14 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
                     timeout=aiohttp.ClientTimeout(total=1000)
                 ) as download_resp:
                     if download_resp.status != 200:
-                        raise Exception("Download failed")
+                        raise Exception("AmpliPi System Update download failed")
 
                 async with session.get(
                     f"{self._updater_url}/update/install",
                     timeout=aiohttp.ClientTimeout(total=1000)
                 ) as install_resp:
                     if install_resp.status != 200:
-                        raise Exception("Install failed")
+                        raise Exception("AmpliPi System Update installation failed")
 
             await watch_and_restart()
 
@@ -152,6 +156,7 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
             self._LOGGER.error(f"Update failed due to error: {e}")
         finally:
             self.in_progress = False
+            await self.coordinator.async_request_refresh()
 
     async def async_release_notes(self):
         return self.release_summary
