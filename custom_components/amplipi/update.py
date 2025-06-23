@@ -1,9 +1,7 @@
 from homeassistant.components.update import UpdateEntity, UpdateEntityFeature
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from typing import Any
-from homeassistant.const import STATE_UNKNOWN
 import logging
-import requests
 import aiohttp
 import json
 from .coordinator import AmpliPiCoordinator
@@ -85,7 +83,7 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
 
     @property
     def supported_features(self):
-        return UpdateEntityFeature.INSTALL | UpdateEntityFeature.RELEASE_NOTES | UpdateEntityFeature.SPECIFIC_VERSION
+        return UpdateEntityFeature.INSTALL | UpdateEntityFeature.RELEASE_NOTES # TODO: Support UpdateEntityFeature.SPECIFIC_VERSION
 
     def get_update_info(self, update: str = "latest"):
         if self.coordinator.data is not None:
@@ -119,6 +117,10 @@ class AmpliPiUpdate(CoordinatorEntity, UpdateEntity):
                                 if data["type"] == "info":
                                     # It might seem odd to make something literally labeled info be printed as not info level, but this is very loud
                                     self._LOGGER.debug(data["message"])
+                                elif data["type"] == "warning":
+                                    self._LOGGER.warning(data["message"])
+                                elif data["type"] == "failure":
+                                    self._LOGGER.error(data["message"])
                                 else:
                                     self._LOGGER.info(data["message"])
 
