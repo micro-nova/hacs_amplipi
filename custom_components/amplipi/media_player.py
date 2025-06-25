@@ -1468,3 +1468,4 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         if self._stream is None:
             return False
         return True
+    
