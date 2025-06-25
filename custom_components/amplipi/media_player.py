@@ -135,82 +135,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     _client: AmpliPi
     _domain: str
     _image_base_path: str # Where the album art metadata is stored on home assistant
-
-    # Was the last polling cycle successful?
-    _last_update_successful: bool = False
-
-    # List of various arbitrary extra state attributes. Home assistant expects this list to exist, but it doesn't necessarily contain anything in most of our cases.
-    _extra_attributes: List = []
-
-    # The currently connected source or stream connected to the entity. If the entity is a source or stream, these are aliased forms of their local self._source or self._stream.
-    _current_stream: Optional[Stream] = None
-    _current_source: Optional[Source] = None
-
-    # Does home assistant let you interact with the entity? False by default, made true if the entity is able to poll properly.
-    _available: bool = False
-
-    # Should the media player be set to STATE_OFF?
-    _is_off: bool = False
-
-    # The displayname of the entity. Also what is passed to async_select_source via dropdown menus.
-    _name: str
-
-    def get_entry_by_value(self, value: str) -> Union[Source, Zone, Group, Stream, None]:
-        """Find what dict within the state array has a given value and return said dict"""
-        if self.coordinator.data is not None:
-            for category in (self.coordinator.data.sources, self.coordinator.data.zones, self.coordinator.data.groups, self.coordinator.data.streams):
-                for entry in category:
-                    if value in entry.model_dump().values():
-                        return entry
-        return None
-            
-    def extract_amplipi_id_from_unique_id(self, uid: str) -> Optional[int]:
-        """
-            Extracts all digits from a string and returns them\n
-            Useful for getting amplipi-side ids out of entity unique_ids due to the unique_id being formatted as "media_player.amplipi_{stream, group, zone, or source}_{amplipi-side id}"\n
-            Examples:\n
-            media_player.amplipi_stream_1000\n
-            media_player.amplipi_source_0
-        """
-        match = re.search(r"\d+", uid)
-        if match:
-            return int(match.group())
-        if uid != "amplipi_announcement":
-            # amplipi_announcement is the only amplipi entity without numbers in its id
-            # Filter against that before sending an error message so you don't print an error every few seconds whenever a source polls for the source list
-            _LOGGER.error(f"extract_amplipi_id_from_unique_id could not determine entity ID: {uid}")
-        return None
-
-    def available_streams(self, source: Source):
-        """Returns the available streams (generally all of them minus three of the four RCAs) relative to the provided source"""
-        streams: List[str] = ['None']
-        if self.coordinator.data is not None:
-class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
-    """
-        Parent class of all AmpliPi MediaPlayer entities. Used to enforce common variables and provide shared functionality.
-    """
-    # State repository
-    coordinator: AmpliPiCoordinator
-
-    # The amplipi-side id
-    _id: int
-
-    # Home assistant side immutible id
-    _unique_id: str
-
-    # Lists of zones and groups related to the entity, either because the entity is a zone or a group or because they're connected to the entity
-    _zones: list[Zone] = []
-    _groups: List[Group] = []
-
-    # List of all known streams
-    _streams: List[Stream] = []
-
-    # Home assistant particulars that are populated at entity instantiation via hass
-    _vendor: str
-    _version: str
-    _client: AmpliPi
-    _domain: str
-    _image_base_path: str # Where the album art metadata is stored on home assistant
+    _attr_has_entity_name: bool = True # Mandatory to set to True as per https://developers.home-assistant.io/docs/core/entity#has_entity_name-true-mandatory-for-new-integrations
 
     # Was the last polling cycle successful?
     _last_update_successful: bool = False
@@ -647,11 +572,6 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
         return self._unique_id
     
     @property
-    def name(self):
-        """Return the name of the entity"""
-        return "AmpliPi: " + self._name
-    
-    @property
     def source(self): # This is handled as a default as it's used by streams, groups, and zones but for sources this is overridden
         """Returns the current source playing, if this is wrong it won't show up as the selected source on HomeAssistant"""
         if self._current_source in [None, "None"]:
@@ -674,11 +594,6 @@ class AmpliPiSource(AmpliPiMediaPlayer):
     def unique_id(self):
         """Return unique ID for this entity."""
         return self._unique_id
-    
-    @property
-    def name(self):
-        """Return the name of the entity"""
-        return "AmpliPi: " + self._name
     
     @property
     def source(self): # This is handled as a default as it's used by streams, groups, and zones but for sources this is overridden
@@ -721,11 +636,13 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         self._client = client
         
         self._name = source.original_name
+        self._attr_name = self._name
         self._unique_id = source.unique_id
         self.entity_id = source.entity_id
         self._attr_device_class = "source"
         
         self._name = source.original_name
+        self._attr_name = self._name
         self._unique_id = source.unique_id
         self.entity_id = source.entity_id
         self._attr_device_class = "source"
@@ -1110,7 +1027,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             self.entity_id = zone.entity_id
 
         self.entity_id = f"media_player.{self._unique_id}"
-        self.entity_id = f"media_player.{self._unique_id}"
+        self._attr_name = self._name
         self._streams = streams
         self._image_base_path = image_base_path
         self._vendor = vendor
@@ -1262,7 +1179,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         return DeviceInfo(
             identifiers={(DOMAIN, self.unique_id)},
             model=model,
-            name=self._name,
+            name=None,
             manufacturer=self._vendor,
             sw_version=self._version,
             configuration_url=self._image_base_path,
@@ -1619,6 +1536,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
                  vendor: str, version: str, image_base_path: str,
                  client: AmpliPi):
         self._current_source = None
+        self.has_entity_name = True
 
         self._unique_id = f"{namespace}_announcement"
         self.entity_id = f"media_player.{self._unique_id}"
@@ -1632,7 +1550,8 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         self._extra_attributes: List = []
         self._extra_attributes: List = []
         self._image_base_path = image_base_path
-        self._name = "AmpliPi Announcement"
+        self._name = "Announcement Channel"
+        self._attr_name = self._name
         self._volume = 0.5
 
     @property
@@ -1663,11 +1582,6 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
     def unique_id(self):
         """Return unique ID for this entity."""
         return self._unique_id
-
-    @property
-    def name(self):
-        """Return the name of the zone."""
-        return "AmpliPi: " + self._name
 
     @property
     def state(self):
@@ -1724,6 +1638,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
 
         self._id = stream.id
         self._name = stream.name
+        self._attr_name = self._name
         self._unique_id = stream.unique_id
         self.entity_id = stream.entity_id
         # not a real device class, but allows us to match streams and only streams with the start_streaming blueprint's streams dropdown
