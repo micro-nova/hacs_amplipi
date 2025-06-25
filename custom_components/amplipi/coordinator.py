@@ -38,6 +38,7 @@ class AmpliPiCoordinator(DataUpdateCoordinator):
             "html_url": "https://github.com/micro-nova/AmpliPi/releases/tag/0.4.6",
         }
         self.releases: List[dict] = [{}]
+        self._last_poll_unsuccessful = False
 
     async def get_friendly_name(self, entity_id):
         """Look up entity in hass.states and get the friendly name"""
@@ -86,6 +87,9 @@ class AmpliPiCoordinator(DataUpdateCoordinator):
             state = await self.api.get_status()
             state = state.dict()
 
+            if self._last_poll_unsuccessful:
+                _LOGGER.info("AmpliPi has regained polling connection")
+
             state["sources"] = [
                 await build_entity(entity, "source", Source, f"Source {entity['id'] + 1}")
                 for entity in state["sources"]
@@ -114,5 +118,7 @@ class AmpliPiCoordinator(DataUpdateCoordinator):
             return AmpliPiDataSchema(status=status, latest=self.latest, releases=self.releases)
 
         except Exception as e:
+            self._last_poll_unsuccessful = True
+            _LOGGER.error("AmpliPi was not able to poll successfully, connection with your AmpliPi System may have been lost")
             raise Exception(f"Error fetching data: {e}")
         
