@@ -6,7 +6,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT, CONF_NAME, CONF_ID
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import logging
-from .coordinator import AmpliPiCoordinator
+from .coordinator import AmpliPiDataClient
 
 from .const import DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, CONF_API_PATH
 
@@ -15,7 +15,7 @@ PLATFORMS = ["media_player"]
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    coordinator = AmpliPiCoordinator(
+    coordinator = AmpliPiDataClient(
             hass=hass,
             config_entry=entry,
             logger=_LOGGER,

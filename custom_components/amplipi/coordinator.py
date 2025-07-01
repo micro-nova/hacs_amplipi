@@ -14,7 +14,7 @@ from pyamplipi.models import SourceUpdate, ZoneUpdate, MultiZoneUpdate, GroupUpd
 from .models import Status, Source, Zone, Group, Stream
 from .const import DOMAIN
 
-class AmpliPiCoordinator(DataUpdateCoordinator, AmpliPi):
+class AmpliPiDataClient(DataUpdateCoordinator, AmpliPi):
     def __init__(self, hass, logger, config_entry, endpoint, timeout, http_session):
         super().__init__(
             hass,
