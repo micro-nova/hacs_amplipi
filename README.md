@@ -77,15 +77,15 @@ Broadly, the devices that are supported are any devices AmpliPro that run the Am
 
 ### Supported
 The following devices are supported by this integration:
-- AmpliPro Controller
-- AmpliPro Streamer
-- AmpliPro Expansion Unit*
+- [AmpliPro Controller](https://www.amplipro.com/product-page/amplipro-home-audio-controller)
+- [AmpliPro Streamer](https://www.amplipro.com/product-page/amplipro-streamer-4)
+- [AmpliPro Expansion Unit](https://www.amplipro.com/product-page/amplipro-zone-expander)*
 
 * With use of an AmpliPro Controller unit, "support" in this case means "can handle up to 36 zones as are provided by the controller unit
 
 ### Not Supported
 The following devices are not supported by this integration:
-- AmpliPro Wall Panel
+- [AmpliPro Wall Panel](https://www.amplipro.com/product-page/amplipro-wall-panel)
 
 ## Supported Functionality
 
