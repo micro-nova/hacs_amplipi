@@ -81,7 +81,7 @@ The following devices are supported by this integration:
 - [AmpliPro Streamer](https://www.amplipro.com/product-page/amplipro-streamer-4)
 - [AmpliPro Expansion Unit](https://www.amplipro.com/product-page/amplipro-zone-expander)*
 
-* With use of an AmpliPro Controller unit, "support" in this case means "can handle up to 36 zones as are provided by the controller unit
+*With use of an AmpliPro Controller unit, "support" in this case means "can handle up to 36 zones as are provided by the controller unit
 
 ### Not Supported
 The following devices are not supported by this integration:
@@ -100,7 +100,7 @@ This integration provides the following entities:
 - Any number of Streams*
 - 1 x Announcement/PA system
 
-* as your home assistant's storage allows
+*as your home assistant's storage allows
 ## Known Limitations
 
 AmpliPi devices do not report a distinct identifier, so this integration currently only supports one controller per installation.
