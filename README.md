@@ -96,10 +96,11 @@ This integration provides the following entities:
 #### Media Players
 - 4 x Sources
 - 6-36 x Zones (depending on how many AmpliPro Expansion Units are connected to your Controller)
-- as many Groups as you've created in the AmpliPi app or webapp (as your home assistant's storage allows)
-- as many Streams as you've created in the AmpliPi app or webapp (as your home assistant's storage allows)
+- Any number of Groups*
+- Any number of Streams*
 - 1 x Announcement/PA system
 
+* as your home assistant's storage allows
 ## Known Limitations
 
 AmpliPi devices do not report a distinct identifier, so this integration currently only supports one controller per installation.
