@@ -17,12 +17,10 @@ from homeassistant.const import CONF_NAME, STATE_PLAYING, STATE_PAUSED, STATE_ID
 from homeassistant.helpers.entity import DeviceInfo
 from pyamplipi.amplipi import AmpliPi
 from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, Announcement, MultiZoneUpdate, PlayMedia
-from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, Announcement, MultiZoneUpdate, PlayMedia
 
 from .coordinator import AmpliPiDataClient
 from .const import (
-    DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, )
-from .models import Source, Group, Zone, Stream
+    DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP )
 from .models import Source, Group, Zone, Stream
 
 SUPPORT_AMPLIPI_DAC = (
@@ -68,7 +66,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     version = hass_entry[CONF_VERSION]
     image_base_path = f'{hass_entry[CONF_WEBAPP]}'
 
-    status = amplipi_coordinator.data if amplipi_coordinator.data is not None else await amplipi_coordinator.get_status()
+    status = amplipi_coordinator.status if amplipi_coordinator.status is not None else (await amplipi_coordinator.get_status()).status
     sources: list[AmpliPiMediaPlayer] = [
         AmpliPiSource(DOMAIN, source, status.streams, vendor, version, image_base_path, amplipi_coordinator)
         for source in status.sources]
@@ -95,7 +93,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi_coordinator)
     ]
 
-    async_add_entities(sources + zones + groups + streams + announcer)
     async_add_entities(sources + zones + groups + streams + announcer)
 
 
@@ -159,8 +156,8 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
 
     def get_entry_by_value(self, value: str) -> Union[Source, Zone, Group, Stream, None]:
         """Find what dict within the state array has a given value and return said dict"""
-        if self._data_client.data is not None:
-            for category in (self._data_client.data.sources, self._data_client.data.zones, self._data_client.data.groups, self._data_client.data.streams):
+        if self._data_client.status is not None:
+            for category in (self._data_client.status.sources, self._data_client.status.zones, self._data_client.status.groups, self._data_client.status.streams):
                 for entry in category:
                     if value in entry.model_dump().values():
                         return entry
@@ -186,11 +183,11 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     def available_streams(self, source: Source):
         """Returns the available streams (generally all of them minus three of the four RCAs) relative to the provided source"""
         streams: List[str] = ['None']
-        if self._data_client.data is not None:
+        if self._data_client.status is not None:
             # Excludes every RCA except for the one related to the given source
             RCAs = [996, 997, 998, 999]
             rca_selectable = RCAs[source.id]
-            stream_entries = self._data_client.data.streams
+            stream_entries = self._data_client.status.streams
             if stream_entries:
                 for entry in stream_entries:
                     amplipi_id = self.extract_amplipi_id_from_unique_id(entry.unique_id)
@@ -208,7 +205,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
             if self._current_source is not None and source is not None and source.id != self._current_source.id:
                 raise Exception("RCA streams can only connect to sources with the same ID")
 
-            state = self._data_client.data
+            state = self._data_client.status
             source = state.sources[get_fixed_source_id(stream)]
             # It would be cleaner to do the following, but pyamplipi doesn't support RCA stream's index value atm:
             # source = state.sources[self._stream.index]
@@ -249,13 +246,13 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
 
     async def async_connect_zones_to_stream(self, stream: Stream, zones: Optional[List[int]], groups: Optional[List[int]]):
         """Connects zones and/or groups to the source of the selected stream. If stream does not have a source, select one"""
-        state = self._data_client.data
-        source_id = next((s.id for s in state.sources if s.input == f"stream={stream.id}"), None)
+        status = self._data_client.status
+        source_id = next((s.id for s in status.sources if s.input == f"stream={stream.id}"), None)
         if source_id is None:
             source_id = await self.async_connect_stream_to_source(stream)
         
         if source_id is not None:
-            await self.async_connect_zones_to_source(state.sources[source_id], zones, groups)
+            await self.async_connect_zones_to_source(status.sources[source_id], zones, groups)
 
 
     def build_url(self, img_url):
@@ -303,9 +300,9 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     
     async def swap_source(self, old_source: int, new_source: Optional[int] = None):
         """Moves a stream from one source to another, ensuring all zones follow. Generally only used for RCA streams, but able to be used by anyone."""
-        state = self._data_client.data
+        status = self._data_client.status
         
-        moved_stream: Stream = next(filter(lambda s: state.sources[old_source].input == f"stream={s.id}", state.streams), None)
+        moved_stream: Stream = next(filter(lambda s: status.sources[old_source].input == f"stream={s.id}", status.streams), None)
         if moved_stream is not None and moved_stream.type != "rca":
             # RCA streams each have an associated source to output them due to hardware constraints
             if new_source is None:
@@ -321,7 +318,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
                     )
                 )
 
-                moved_zones = [z.id for z in state.zones if z.source_id == old_source]
+                moved_zones = [z.id for z in status.zones if z.source_id == old_source]
                 await self._data_client.set_zones(
                     MultiZoneUpdate(
                         zones=moved_zones,
@@ -612,11 +609,11 @@ class AmpliPiSource(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for source {self._source.id}')
-        state = self._data_client.data
-        if state is not None:
+        if self._data_client.status is not None:
+            status = self._data_client.status
             try:
-                source = next(filter(lambda z: z.id == self._source.id, state.sources), None)
-                streams = state.streams
+                source = next(filter(lambda z: z.id == self._source.id, status.sources), None)
+                streams = status.streams
             except Exception:
                 self._last_update_successful = False
                 _LOGGER.error(f'Could not update source {self._source.id}')
@@ -634,8 +631,8 @@ class AmpliPiSource(AmpliPiMediaPlayer):
                 stream_id = int(self._source.input.split('=')[1])
                 self._current_stream = next(filter(lambda s: s.id == stream_id, self._streams), None)
 
-            self._zones = list(filter(lambda z: z.source_id == self._source.id, state.zones))
-            self._groups = list(filter(lambda z: z.source_id == self._source.id, state.groups))
+            self._zones = list(filter(lambda z: z.source_id == self._source.id, status.zones))
+            self._groups = list(filter(lambda z: z.source_id == self._source.id, status.groups))
             self.get_song_info(self._source)
             self._last_update_successful = True
 
@@ -893,28 +890,28 @@ class AmpliPiZone(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for source {self._id}')
-        state = self._data_client.data
-        if state is not None:
+        if self._data_client.status is not None:
+            status = self._data_client.status
             zone = None
             group = None
             enabled = False
 
             try:
                 if self._group is not None:
-                    group: Group = next(filter(lambda z: z.id == self._id, state.groups), None)
+                    group: Group = next(filter(lambda z: z.id == self._id, status.groups), None)
                     if not group:
                         self._last_update_successful = False
                         return
-                    any_enabled_zone = next(filter(lambda z: z.id in group.zones, state.zones), None)
+                    any_enabled_zone = next(filter(lambda z: z.id in group.zones, status.zones), None)
 
                     if any_enabled_zone is not None:
                         enabled = True
 
-                    connected_sources = [state.zones[zone_index].source_id for zone_index in group.zones]
+                    connected_sources = [status.zones[zone_index].source_id for zone_index in group.zones]
                     # Is every zone connected to the same source?
                     self._split_group = len(set(connected_sources)) != 1
                 else:
-                    zone = next(filter(lambda z: z.id == self._id, state.zones), None)
+                    zone = next(filter(lambda z: z.id == self._id, status.zones), None)
                     if not zone:
                         self._last_update_successful = False
                         return
@@ -928,7 +925,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                 zone_ids = []
 
                 for zone_id in self._group.zones:
-                    for state_zone in state.zones:
+                    for state_zone in status.zones:
                         if state_zone.id == zone_id and not state_zone.disabled:
                             zone_ids.append(zone_id)
                 self._extra_attributes = {"amplipi_zones" : zone_ids}
@@ -941,7 +938,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
             if self._group is not None:
                 for zone_id in self._group.zones:
-                    for state_zone in state.zones:
+                    for state_zone in status.zones:
                         if state_zone.id == zone_id and not state_zone.disabled:
                             self._available = True
                 self._available = False
@@ -951,19 +948,19 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
             self._zone = zone
             self._group = group
-            self._streams = state.streams
-            self._sources = state.sources
+            self._streams = status.streams
+            self._sources = status.sources
             self._last_update_successful = True
             self._enabled = enabled
             self._current_source = None
 
             # When a zone is off it connects to source_id -2, groups also yield the source_id that all requisite zones are already connected to
             if self._group is not None:
-                self._current_source = next(filter(lambda s: self._group.source_id == s.id, state.sources), None)
+                self._current_source = next(filter(lambda s: self._group.source_id == s.id, status.sources), None)
                 self._is_off = self._group.source_id == -2
 
             elif self._zone.source_id is not None:
-                self._current_source = next(filter(lambda s: self._zone.source_id == s.id, state.sources), None)
+                self._current_source = next(filter(lambda s: self._zone.source_id == s.id, status.sources), None)
                 self._is_off = self._zone.source_id == -2
 
             if self._current_source is not None and 'stream=' in self._current_source.input and 'stream=local' not in self._current_source.input:
@@ -1103,11 +1100,11 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
     async def _get_extra_attributes(self):
         if self._group is not None:
-            state = self._data_client.data
+            status = self._data_client.status
             zone_ids = []
 
             for zone_id in self._group.zones:
-                for state_zone in state.zones:
+                for state_zone in status.zones:
                     if state_zone.id == zone_id and not state_zone.disabled:
                         zone_ids.append(zone_id)
             self._extra_attributes = {"amplipi_zones" : zone_ids}
@@ -1118,10 +1115,10 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             self._extra_attributes = {"amplipi_zone_id" : self._zone.id}
 
     async def _update_available(self):
-        state = self._data_client.data
+        status = self._data_client.status
         if self._group is not None:
             for zone_id in self._group.zones:
-                for state_zone in state.zones:
+                for state_zone in status.zones:
                     if state_zone.id == zone_id and not state_zone.disabled:
                         return True
             return False
@@ -1217,7 +1214,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
     async def async_play_media(self, media_type, media_id, **kwargs):
         _LOGGER.debug(f'Play Media {media_type} {media_id} {kwargs}')
         if media_source.is_media_source_id(media_id):
-            play_item = await media_source.async_resolve_media(self.hass, media_id)
+            play_item = await media_source.async_resolve_media(self.hass, media_id, self.entity_id)
             media_id = play_item.url
             _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
@@ -1376,18 +1373,18 @@ class AmpliPiStream(AmpliPiMediaPlayer):
     def sync_state(self):
         """Retrieve latest state."""
         _LOGGER.info(f'Retrieving state for stream {self._id}')
-        state = self._data_client.data
-        if state is not None:
+        if self._data_client.status is not None:
+            status = self._data_client.status
             groups = []
             zones = []
 
             try:
-                stream = next(filter(lambda s: s.id == self._id, state.streams), None)
+                stream = next(filter(lambda s: s.id == self._id, status.streams), None)
                 if stream is not None:
-                    current_source = next((s for s in state.sources if s.input == f"stream={stream.id}"), None)
+                    current_source = next((s for s in status.sources if s.input == f"stream={stream.id}"), None)
                     if current_source is not None:
-                        groups = [group for group in state.groups if group.source_id == current_source.id]
-                        zones = [zone for zone in state.zones if zone.source_id == current_source.id]
+                        groups = [group for group in status.groups if group.source_id == current_source.id]
+                        zones = [zone for zone in status.zones if zone.source_id == current_source.id]
                 else:
                     self._last_update_successful = False
                     return
@@ -1405,7 +1402,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             self._available = self._stream is not None
 
             self._stream = stream
-            self._sources = state.sources
+            self._sources = status.sources
             self._current_source = current_source
             if current_source: # Cannot be off while connected, but can be on while disconnected
                 self._is_off = False
@@ -1498,4 +1495,3 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         if self._stream is None:
             return False
         return True
-    
