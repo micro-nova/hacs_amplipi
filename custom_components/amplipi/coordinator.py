@@ -3,7 +3,7 @@
     Used to synchronize the current AmpliPi state with all of the corresponding HA Entities
 """
 from datetime import timedelta
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
@@ -100,62 +100,58 @@ class AmpliPiDataClient(DataUpdateCoordinator, AmpliPi):
         except Exception as e:
             raise UpdateFailed(f"Error fetching data: {e}") from e
         
+    def intecept_and_consume(func: Callable):
+        """Intercept the return of a function and consume the data into the data coordinator"""
+        async def wrapper(self, *args, **kwargs):
+            resp = await func(self, *args, **kwargs)
+            return await self.set_data(resp.dict())
+        return wrapper
+
+    @intecept_and_consume
     async def get_status(self) -> Status:
-        resp = await super().get_status()
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().get_status()
 
+    @intecept_and_consume
     async def set_source(self, source_id: int, source_update: SourceUpdate) -> Status:
-        resp = await super().set_source(source_id, source_update)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().set_source(source_id, source_update)
         
+    @intecept_and_consume
     async def set_zone(self, zone_id: int, zone_update: ZoneUpdate) -> Status:
-        resp = await super().set_zone(zone_id, zone_update)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().set_zone(zone_id, zone_update)
 
+    @intecept_and_consume
     async def set_zones(self, zone_update: MultiZoneUpdate) -> Status:
-        resp = await super().set_zones(zone_update)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().set_zones(zone_update)
         
+    @intecept_and_consume
     async def play_media(self, media: PlayMedia) -> Status:
-        resp = await super().play_media(media)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().play_media(media)
 
+    @intecept_and_consume
     async def set_group(self, group_id, update: GroupUpdate) -> Status:
-        resp = await super().set_group(group_id, update)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().set_group(group_id, update)
 
+    @intecept_and_consume
     async def announce(self, announcement: Announcement, timeout: Optional[int] = None) -> Status:
-        resp = await super().announce(announcement, timeout)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().announce(announcement, timeout)
 
+    @intecept_and_consume
     async def play_stream(self, stream_id: int) -> Status:
-        resp = await super().play_stream(stream_id)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().play_stream(stream_id)
 
+    @intecept_and_consume
     async def pause_stream(self, stream_id: int) -> Status:
-        resp = await super().pause_stream(stream_id)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().pause_stream(stream_id)
 
+    @intecept_and_consume
     async def previous_stream(self, stream_id: int) -> Status:
-        resp = await super().previous_stream(stream_id)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().previous_stream(stream_id)
 
+    @intecept_and_consume
     async def next_stream(self, stream_id: int) -> Status:
-        resp = await super().previous_stream(stream_id)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().previous_stream(stream_id)
 
+    @intecept_and_consume
     async def stop_stream(self, stream_id: int) -> Status:
-        resp = await super().stop_stream(stream_id)
-        status = await self.set_data(resp.dict())
-        return status
+        return await super().stop_stream(stream_id)
+        
