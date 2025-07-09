@@ -141,7 +141,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     _last_update_successful: bool = False
 
     # List of various arbitrary extra state attributes. Home assistant expects this list to exist, but it doesn't necessarily contain anything in most of our cases.
-    _extra_attributes: List = []
+    _extra_attributes: dict = {}
 
 
     # Does home assistant let you interact with the entity? False by default, made true if the entity is able to poll properly.
