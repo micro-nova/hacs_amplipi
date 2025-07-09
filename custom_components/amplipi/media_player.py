@@ -23,7 +23,6 @@ from .coordinator import AmpliPiDataClient
 from .const import (
     DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, )
 from .models import Source, Group, Zone, Stream
-from .models import Source, Group, Zone, Stream
 
 SUPPORT_AMPLIPI_DAC = (
         MediaPlayerEntityFeature.SELECT_SOURCE
@@ -85,17 +84,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi_coordinator)
         for stream in status.streams
     ]
-    
-    streams: list[AmpliPiMediaPlayer] = [
-        AmpliPiStream(DOMAIN, stream, status.sources, vendor, version, image_base_path, amplipi_coordinator)
-        for stream in status.streams
-    ]
 
     announcer: list[MediaPlayerEntity] = [
         AmpliPiAnnouncer(DOMAIN, vendor, version, image_base_path, amplipi_coordinator)
     ]
 
-    async_add_entities(sources + zones + groups + streams + announcer)
     async_add_entities(sources + zones + groups + streams + announcer)
 
 
