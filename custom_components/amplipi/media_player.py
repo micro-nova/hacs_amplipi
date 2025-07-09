@@ -17,7 +17,6 @@ from homeassistant.const import CONF_NAME, STATE_PLAYING, STATE_PAUSED, STATE_ID
 from homeassistant.helpers.entity import DeviceInfo
 from pyamplipi.amplipi import AmpliPi
 from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, Announcement, MultiZoneUpdate, PlayMedia
-from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, Announcement, MultiZoneUpdate, PlayMedia
 
 from .coordinator import AmpliPiDataClient
 from .const import (
