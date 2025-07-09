@@ -40,6 +40,15 @@ The AmpliPi Media Player entities support:
 ## Optional Setup
 This component has an optional companion component that can be found at https://github.com/micro-nova/AmpliPi-HomeAssistant-Card if you wish to use home assistant as a ui for your AmpliPi software. You can install that by first installing the [MiniMediaPlayer](https://github.com/kalkih/mini-media-player) component which can be found by searching for it in the HACS searchbar, and then following the same installation guide as this component but replacing the repository link with https://github.com/micro-nova/AmpliPi-HomeAssistant-Card and with type "Dashboard"
 
+## Example Automations
+
+### Start Streaming
+This integration is for a whole-home audio system, in most cases you're likely to just want to play some music to some number of zones or groups at a specified volume. Luckily, we have a blueprint that does just that which you can install [here](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmicro-nova%2Fhacs_amplipi%2Fblob%2Fmain%2Fcustom_components%2Famplipi%2Fblueprints%2Fstart_streaming.yaml)
+That particular blueprint doesn't provide any triggers, but the opportunites are endless, here's just a few examples: 
+- Play music to a room when a motion detector notices someone is there (or disconnects when there isn't)
+- Connect your TV's audio output to go to the surround sound speakers when you're watching something
+- Set up a jukebox using RFID cards that are associated with a specific stream
+
 ## Credits
 
 Cursor graphics used in this document from [Freepik](https://www.freepik.com/).
