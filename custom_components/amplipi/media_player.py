@@ -141,7 +141,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     _last_update_successful: bool = False
 
     # List of various arbitrary extra state attributes. Home assistant expects this list to exist, but it doesn't necessarily contain anything in most of our cases.
-    _extra_attributes: List = []
+    _extra_attributes: dict = {}
 
 
     # Does home assistant let you interact with the entity? False by default, made true if the entity is able to poll properly.
@@ -382,7 +382,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
 
     @property
     def unique_id(self):
-        """Return unique ID for this device."""
+        """Return unique ID for this entity."""
         return self._unique_id
     
     @property
@@ -695,8 +695,11 @@ class AmpliPiSource(AmpliPiMediaPlayer):
         zone_list = []
         for zone in self._zones:
             zone_list.append(zone.id)
-        return {"amplipi_source_id" : self._id,
-                "amplipi_source_zones" : zone_list}
+        return {
+            "amplipi_source_id" : self._id,
+            "amplipi_source_zones" : zone_list,
+            "stream_connected": self._stream is not None
+        }
 
 class AmpliPiZone(AmpliPiMediaPlayer):
     """Representation of an AmpliPi Zone and/or Group. Supports Audio volume
@@ -1067,9 +1070,13 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
     @property
     def extra_state_attributes(self):
-        return self._extra_attributes
+        return {
+            "amplipi_zones": self._get_zone_ids(),
+            "is_group": self._group is not None,
+            "stream_connected": self._stream is not None
+        }
 
-    async def _get_extra_attributes(self):
+    async def _get_zone_ids(self) -> List[int]:
         if self._group is not None:
             state = self.coordinator.data
             zone_ids = []
@@ -1078,12 +1085,9 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                 for state_zone in state.zones:
                     if state_zone.id == zone_id and not state_zone.disabled:
                         zone_ids.append(zone_id)
-            self._extra_attributes = {"amplipi_zones" : zone_ids}
-
-            #if self._zone_num_cache != len(zone_ids):
-                #self.hass.bus.fire("group_change_event", {"group_change": True})
+            return zone_ids
         else:
-            self._extra_attributes = {"amplipi_zone_id" : self._zone.id}
+            return self._zone.id
 
     async def _update_available(self):
         state = self.coordinator.data
@@ -1117,7 +1121,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         self._client = client
         self._last_update_successful = True
         self._available = True
-        self._extra_attributes: List = []
+        self._extra_attributes: dict = {}
         self._image_base_path = image_base_path
         self._name = "AmpliPi Announcement"
         self._volume = 0.5
@@ -1212,6 +1216,7 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         self._unique_id = stream.unique_id
         self.entity_id = stream.entity_id
         # not a real device class, but allows us to match streams and only streams with the start_streaming blueprint's streams dropdown
+        # note that device class doesn't actually define an entity as a device and is just a specific header to filter by
         self._attr_device_class = "stream"
         
         self._image_base_path = image_base_path
@@ -1227,7 +1232,6 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             'Source 4',
         ] if self._stream.type != "rca" else ['None', f'Source {get_fixed_source_id(self._stream) + 1}'] # +1 to the source id to provide the proper text for the source
         self._available = False
-        self._extra_attributes = []
         self._is_off: bool = True
 
     async def _update_zones(self, update: ZoneUpdate):
@@ -1330,12 +1334,6 @@ class AmpliPiStream(AmpliPiMediaPlayer):
                 self._last_update_successful = False
                 _LOGGER.error(f'Could not update stream {self._id} due to error: {e}')
                 return
-
-
-            if self._source is not None:
-                self._extra_attributes = {"amplipi_source_id" : self._source.id }
-            else:
-                self._extra_attributes = {"amplipi_source_id" : None }
 
             self._available = self._stream is not None
 
