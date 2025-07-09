@@ -100,58 +100,58 @@ class AmpliPiDataClient(DataUpdateCoordinator, AmpliPi):
         except Exception as e:
             raise UpdateFailed(f"Error fetching data: {e}") from e
         
-    def intecept_and_consume(func: Callable):
+    def intercept_and_consume(func: Callable):
         """Intercept the return of a function and consume the data into the data coordinator"""
         async def wrapper(self, *args, **kwargs):
             resp = await func(self, *args, **kwargs)
             return await self.set_data(resp.dict())
         return wrapper
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def get_status(self) -> Status:
         return await super().get_status()
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def set_source(self, source_id: int, source_update: SourceUpdate) -> Status:
         return await super().set_source(source_id, source_update)
         
-    @intecept_and_consume
+    @intercept_and_consume
     async def set_zone(self, zone_id: int, zone_update: ZoneUpdate) -> Status:
         return await super().set_zone(zone_id, zone_update)
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def set_zones(self, zone_update: MultiZoneUpdate) -> Status:
         return await super().set_zones(zone_update)
         
-    @intecept_and_consume
+    @intercept_and_consume
     async def play_media(self, media: PlayMedia) -> Status:
         return await super().play_media(media)
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def set_group(self, group_id, update: GroupUpdate) -> Status:
         return await super().set_group(group_id, update)
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def announce(self, announcement: Announcement, timeout: Optional[int] = None) -> Status:
         return await super().announce(announcement, timeout)
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def play_stream(self, stream_id: int) -> Status:
         return await super().play_stream(stream_id)
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def pause_stream(self, stream_id: int) -> Status:
         return await super().pause_stream(stream_id)
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def previous_stream(self, stream_id: int) -> Status:
         return await super().previous_stream(stream_id)
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def next_stream(self, stream_id: int) -> Status:
         return await super().previous_stream(stream_id)
 
-    @intecept_and_consume
+    @intercept_and_consume
     async def stop_stream(self, stream_id: int) -> Status:
         return await super().stop_stream(stream_id)
         
