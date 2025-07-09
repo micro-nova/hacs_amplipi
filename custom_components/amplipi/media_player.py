@@ -404,7 +404,8 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
         if self._source is not None and self._source.info is not None:
             cmds_avail = SUPPORT_LOOKUP_DICT.keys() & self._source.info.supported_cmds
             features_avail = [SUPPORT_LOOKUP_DICT.get(cmd) for cmd in cmds_avail]
-            supported_features = supported_features | reduce(operator.or_,  features_avail) # Add everything from the features_avail list to the support dict
+            if features_avail:
+                supported_features = supported_features | reduce(operator.or_,  features_avail) # Add everything from the features_avail list to the support dict
         return supported_features | DEFAULT_SUPPORTED_COMMANDS
     
 
