@@ -1,0 +1,6 @@
+intents:
+  SourceSelect:
+    - "set the source of {not_source} to {source}"
+    - "use {source} on {not_source}"
+    - "use {source} with {not_source}"
+    - "connect {not_source} to {source}"
