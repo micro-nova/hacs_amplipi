@@ -12,7 +12,7 @@ blueprint:
       selector:
         entity:
           filter:
-            - device_class: receiver
+            - device_class: "source"
             - integration: AmpliPi
 
     stream:
