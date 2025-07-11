@@ -54,7 +54,7 @@ You can send a text-to-speech message to the PA system using automations as well
 To simplify this process, we've made a [blueprint](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmicro-nova%2Fhacs_amplipi%2Fblob%2Fmain%2Fcustom_components%2Famplipi%2Fblueprints%2Ftts_announcement.yaml) that pre-populates the two related entities so all you need to do is type a message and decide if it should be cached. Similarly to the Start Streaming blueprint, this blueprint doesn't come with any triggers, though here's a few examples of what you could do:
 - Place a button in the kitchen to be pressed when dinner is ready to let the whole family know
 - Set a time trigger so that you don't lose track of time, such as reminding you to go to bed or do some chore
-- Use with other integrations to make more specialty announcements, such as warning you when a calendar event is coming up
+- Use with other integrations to make more specialty announcements, such as [warning you when a calendar event is coming up](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmicro-nova%2Fhacs_amplipi%2Fblob%2Fmain%2Fcustom_components%2Famplipi%2Fblueprints%2Fgoogle_calendar_announcement.yaml) (Note that you will need to install the [Google Calendar](https://www.home-assistant.io/integrations/google/) plugin to make use of the linked blueprint)
 
 ## Credits
 
