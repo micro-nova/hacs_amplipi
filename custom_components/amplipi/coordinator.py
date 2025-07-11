@@ -100,6 +100,8 @@ class AmpliPiDataClient(DataUpdateCoordinator, AmpliPi):
         except Exception as e:
             raise UpdateFailed(f"Error fetching data: {e}") from e
         
+    # TODO: Find a better way to do the following without all the repeated boilerplate code
+        
     def intercept_and_consume(func: Callable):
         """Intercept the return of a function and consume the data into the data coordinator"""
         async def wrapper(self, *args, **kwargs):
