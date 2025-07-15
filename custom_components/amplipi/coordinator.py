@@ -4,9 +4,11 @@
 """
 from datetime import timedelta
 from typing import Optional, Union, Callable
+from packaging.version import Version
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
+from homeassistant.components import persistent_notification
 
 from pyamplipi.amplipi import AmpliPi
 from pyamplipi.models import SourceUpdate, ZoneUpdate, MultiZoneUpdate, GroupUpdate, PlayMedia, Announcement, Status as PyStatus, Source as PySource, Stream as PyStream, Group as PyGroup, Zone as PyZone, Status as PyStatus
@@ -92,6 +94,10 @@ class AmpliPiDataClient(DataUpdateCoordinator, AmpliPi):
                 await build_entity(entity, "stream", Stream, entity["name"])
                 for entity in state["streams"]
             ]
+
+            minimum_version = "0.4.7"
+            if Version(self.data.version) < Version(minimum_version):
+                persistent_notification.create(self.hass, f"AmpliPi version must be at least {minimum_version}", "AmpliPi version too low", f"{self.data.version}_version_error")
 
             status = Status(**state)
             self.async_set_updated_data(status)
