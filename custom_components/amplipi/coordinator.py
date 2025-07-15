@@ -97,7 +97,7 @@ class AmpliPiDataClient(DataUpdateCoordinator, AmpliPi):
 
             minimum_version = "0.4.7"
             if Version(self.data.version) < Version(minimum_version):
-                persistent_notification.create(self.hass, f"AmpliPi version must be at least {minimum_version}", "AmpliPi version too low", f"{self.data.version}_version_error")
+                persistent_notification.create(self.hass, f"AmpliPi version must be at least {minimum_version}, please go to http://amplipi.local:5001/update to correct this", "AmpliPi version too low", f"{self.data.version}_version_error")
 
             status = Status(**state)
             self.async_set_updated_data(status)
