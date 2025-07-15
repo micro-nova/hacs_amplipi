@@ -1074,7 +1074,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             "stream_connected": self._stream is not None
         }
 
-    async def _get_zone_ids(self) -> List[int]:
+    def _get_zone_ids(self) -> List[int]:
         if self._group is not None:
             state = self.coordinator.data
             zone_ids = []
