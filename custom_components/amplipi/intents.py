@@ -4,7 +4,12 @@ from homeassistant.const import ATTR_ENTITY_ID
 from typing import List
 
 class IntentBase(intent.IntentHandler):
+    """Parent class to custom home assistant voice commands"""
     intent_type: str
+
+    async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
+        """Handle the intent."""
+        raise NotImplementedError()
     
     # Slot name rules:
     # - 'source', 'stream', 'zone', 'group': return entities of the given type
@@ -60,6 +65,7 @@ class IntentBase(intent.IntentHandler):
     
 
 class SourceSelect(IntentBase):
+    """Verbally connect a source to a zone, group, or stream"""
     intent_type = "SourceSelect"
 
     async def async_handle(self, intent_obj):
