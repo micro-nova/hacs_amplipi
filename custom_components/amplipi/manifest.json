@@ -12,5 +12,6 @@
     "@micro-nova"
   ],
   "iot_class": "local_polling",
-  "version": "1.0"
+  "version": "1.0",
+  "intent": true
 }

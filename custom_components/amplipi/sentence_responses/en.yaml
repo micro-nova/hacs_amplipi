@@ -1,0 +1,9 @@
+SourceSelect:
+  speech:
+    text: "Connecting {{state_attr(not_source, 'friendly_name')}} to {{state_attr(source, 'friendly_name')}}."
+  action:
+    - service: media_player.select_source
+      target:
+        entity_id: "{{ not_source }}"
+      data:
+        source: "{{ source }}"

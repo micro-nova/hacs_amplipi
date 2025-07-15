@@ -5,9 +5,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_NAME, CONF_ID
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.intent import async_register as register_intent
 from pyamplipi.amplipi import AmpliPi
 
 from .const import DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, CONF_API_PATH
+from .intents import SourceSelect
 
 PLATFORMS = ["media_player"]
 
@@ -31,6 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    register_intent(hass, SourceSelect)
 
     return True
 

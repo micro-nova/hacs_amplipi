@@ -1,0 +1,12 @@
+language: "en"
+intents:
+  SourceSelect:
+    data:
+      - sentences:
+          - "(use|set|connect) {source} (on|with|to) {not_source}"
+          - "(use|set|connect) [the source of] {not_source} (on|with|to) {source}"
+        requires_context:
+          source:
+            slot: true
+          not_source:
+            slot: true
