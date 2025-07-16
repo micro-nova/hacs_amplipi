@@ -1,10 +1,16 @@
 blueprint:
   name: "AmpliPi Announce"
-  description: "Easy to use announcement builder\nAfter filling out these sections, hit the three dots in the top right and hit 'Take Control' to set the triggers of the automation"
+  description: "Easy to use announcement builder"
   domain: automation
   author: Micro-Nova
 
   input:
+    trigger_input:
+      name: "Triggers"
+      description: "What would you like to cause the automation to execute?"
+      selector:
+        trigger:
+
     message:
       name: "Message"
       description: "What would you like to announce?"
@@ -19,22 +25,16 @@ blueprint:
       default: true
       selector:
         boolean:
-
-  variables:
-    amplipi_announce_entity: >
-      {% set entity = states.media_player
-        | selectattr('attributes.app_name', 'eq', 'AmpliPi Announcement Channel')
-        | map(attribute='entity_id')
-        | list
-        | first %}
-      {{ entity }}
+        
 mode: single
+
+trigger: !input trigger_input
 
 action:
   - service: tts.speak
     data:
       cache: !input cache
-      media_player_entity_id: "{{ amplipi_announce_entity }}"
+      media_player_entity_id: media_player.amplipi_announcement
       message: !input message
     target:
       entity_id: tts.google_translate_en_com
