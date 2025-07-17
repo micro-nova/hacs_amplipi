@@ -105,7 +105,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities(sources + zones + groups + streams + announcer)
     for entity in groups + zones:
         ret = await register_speaker_device(entity)
-        _LOGGER.error(F"Device {ret.name} initialized!")
 
 
 async def async_remove_entry(hass, entry) -> None:
