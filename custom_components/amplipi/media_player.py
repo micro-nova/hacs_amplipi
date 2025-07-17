@@ -5,8 +5,8 @@ import operator
 import re
 from functools import reduce
 from typing import List, Optional, Union
-
 import validators
+
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components import media_source, persistent_notification
 from homeassistant.components.media_player import MediaPlayerDeviceClass, MediaPlayerEntity, MediaPlayerEntityFeature, MediaType
@@ -14,7 +14,8 @@ from homeassistant.components.media_player.browse_media import (
     async_process_play_media_url,
 )
 from homeassistant.const import CONF_NAME, STATE_PLAYING, STATE_PAUSED, STATE_IDLE, STATE_UNKNOWN, STATE_OFF
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers import device_registry as dr
+
 from pyamplipi.amplipi import AmpliPi
 from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, Announcement, MultiZoneUpdate, PlayMedia
 
@@ -58,6 +59,19 @@ PARALLEL_UPDATES = 1
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the AmpliPi MultiZone Audio Controller"""
+    async def register_speaker_device(device: AmpliPiZone):
+        registered_device = device_registry.async_get_or_create(
+            config_entry_id=config_entry.entry_id,
+            configuration_url=device._image_base_path,
+            identifiers={(DOMAIN, device.entity_id)},
+            manufacturer=device._vendor,
+            name=device.name,
+            sw_version=device._version,
+            model="AmpliPi Group" if device._group is not None else "AmpliPi Zone"
+        )
+        return registered_device
+
+    device_registry = dr.async_get(hass)
     hass_entry = hass.data[DOMAIN][config_entry.entry_id]
 
     amplipi_coordinator: AmpliPiDataClient = hass_entry[AMPLIPI_OBJECT]
@@ -89,6 +103,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     ]
 
     async_add_entities(sources + zones + groups + streams + announcer)
+    for entity in groups + zones:
+        ret = await register_speaker_device(entity)
+        _LOGGER.error(F"Device {ret.name} initialized!")
 
 
 async def async_remove_entry(hass, entry) -> None:
@@ -722,6 +739,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             self.entity_id = zone.entity_id
 
         self.entity_id = f"media_player.{self._unique_id}"
+        self._attr_device_id = self.entity_id
         self._attr_name = self._name
         self._streams = streams
         self._image_base_path = image_base_path
@@ -830,29 +848,6 @@ class AmpliPiZone(AmpliPiMediaPlayer):
     def media_content_type(self):
         """Content type of current playing media."""
         return "speaker"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info for this device."""
-        if self._group is not None:
-            model = "AmpliPi Group"
-        else:
-            model = "AmpliPi Zone"
-
-        via_device = None
-
-        if self._source is not None:
-            via_device = (DOMAIN, f"{DOMAIN}_source_{self._source.id}")
-
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.unique_id)},
-            model=model,
-            name=self._name,
-            manufacturer=self._vendor,
-            sw_version=self._version,
-            configuration_url=self._image_base_path,
-            via_device=via_device,
-        )
 
     def sync_state(self):
         """Retrieve latest state."""
