@@ -1,10 +1,16 @@
 blueprint:
   name: "AmpliPi Start Streaming"
-  description: "Connect a Source to a Stream and assign Zone(s) to the Source.\nAfter filling out these sections, hit the three dots in the top right and hit 'Take Control' to set the triggers of the automation"
+  description: "Connect a Source to a Stream and assign Zone(s) to the Source"
   domain: automation
   author: Micro-Nova
 
   input:
+    trigger_input:
+      name: "Triggers"
+      description: "What would you like to cause the automation to execute?"
+      selector:
+        trigger:
+
     source:
       name: "Source"
       description: "Select the source\nOptional, used to ensure the automation still works when all 4 sources are in use via overriding a connected stream"
@@ -44,8 +50,9 @@ blueprint:
           max: 1
           step: 0.01
           mode: slider
-
 mode: single
+
+trigger: !input trigger_input
 
 action:
   - service: media_player.select_source
