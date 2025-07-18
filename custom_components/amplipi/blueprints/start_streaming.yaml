@@ -44,6 +44,7 @@ blueprint:
     volume:
       name: "Volume"
       description: "Select what volume to start the zones on"
+      default: 0.5
       selector:
         number:
           min: 0
