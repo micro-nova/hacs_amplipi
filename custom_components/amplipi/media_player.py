@@ -711,18 +711,16 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
         if group is not None:
             self._id = group.id
-            self._name = group.original_name
             self._unique_id = group.unique_id
             self.entity_id = group.entity_id
             
         else:
             self._id = zone.id
-            self._name = zone.original_name
             self._unique_id = zone.unique_id
             self.entity_id = zone.entity_id
 
         self.entity_id = f"media_player.{self._unique_id}"
-        self._attr_name = self._name
+        self._attr_name = None
         self._streams = streams
         self._image_base_path = image_base_path
         self._vendor = vendor
@@ -756,7 +754,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         # this allows it to be configured from HA without forcing a specific connection 
         no_source_update = ZoneUpdate(source_id=-1)
         if self._group is not None:
-            _LOGGER.info(f"Turning group {self._name} on")
+            _LOGGER.info(f"Turning group {self.name} on")
             await self._update_group(
                 MultiZoneUpdate(
                     groups=[self._group.id],
@@ -764,7 +762,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                 )
             )
         else:
-            _LOGGER.info(f"Turning zone {self._name} on")
+            _LOGGER.info(f"Turning zone {self.name} on")
             await self._update_zone(no_source_update)
         self._is_off = False
 
@@ -772,7 +770,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         # update zone/group to have a disconnected source state that indicates to HA that the zone/group is off
         source_off_update = ZoneUpdate(source_id=-2)
         if self._group is not None:
-            _LOGGER.info(f"Turning group {self._name} off")
+            _LOGGER.info(f"Turning group {self.name} off")
             await self._update_group(
                 MultiZoneUpdate(
                     groups=[self._group.id],
@@ -780,7 +778,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                 )
             )
         else:
-            _LOGGER.info(f"Turning zone {self._name} off")
+            _LOGGER.info(f"Turning zone {self.name} off")
             await self._update_zone(source_off_update)
         self._is_off = True
 
@@ -835,8 +833,10 @@ class AmpliPiZone(AmpliPiMediaPlayer):
     def device_info(self) -> DeviceInfo:
         """Return device info for this device."""
         if self._group is not None:
+            name = self._group.original_name
             model = "AmpliPi Group"
         else:
+            name = self._zone.original_name
             model = "AmpliPi Zone"
 
         via_device = None
@@ -847,7 +847,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
         return DeviceInfo(
             identifiers={(DOMAIN, self.unique_id)},
             model=model,
-            name=self._name,
+            name=name,
             manufacturer=self._vendor,
             sw_version=self._version,
             configuration_url=self._image_base_path,
