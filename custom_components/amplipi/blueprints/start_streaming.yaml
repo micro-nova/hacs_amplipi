@@ -48,6 +48,7 @@ blueprint:
         number:
           min: 0
           max: 1
+          default: 0.5
           step: 0.01
           mode: slider
 mode: single
