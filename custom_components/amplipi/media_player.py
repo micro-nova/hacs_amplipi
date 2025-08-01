@@ -888,20 +888,6 @@ class AmpliPiZone(AmpliPiMediaPlayer):
                 _LOGGER.error(f'Could not update {"group" if self._group is not None else "zone"} {self._id}')
                 return
 
-            if self._group is not None:
-                zone_ids = []
-
-                for zone_id in self._group.zones:
-                    for state_zone in state.zones:
-                        if state_zone.id == zone_id and not state_zone.disabled:
-                            zone_ids.append(zone_id)
-                self._extra_attributes = {"amplipi_zones" : zone_ids}
-
-                #if self._zone_num_cache != len(zone_ids):
-                    #self.hass.bus.fire("group_change_event", {"group_change": True})
-            else:
-                self._extra_attributes = {"amplipi_zone_id" : self._zone.id}
-
 
             if self._group is not None:
                 for zone_id in self._group.zones:
@@ -1041,7 +1027,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             media_id = play_item.url
             _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
-        #No source, see if we can find an empty one
+        # No source, see if we can find an empty one
         if self._source is None:
             sources = await self._data_client.get_sources()
             for source in sources:
@@ -1063,11 +1049,20 @@ class AmpliPiZone(AmpliPiMediaPlayer):
 
     @property
     def extra_state_attributes(self):
-        return {
-            "amplipi_zones": self._get_zone_ids(),
-            "is_group": self._group is not None,
-            "stream_connected": self._stream is not None
-        }
+        # amplipi_zones and amplipi_zone_id are used by the group card of AmpliPi-HomeAssistant-Card to select related zone entities so they can be listed individually on the card
+        # amplipi_zone_id is used in a similar way on the source cards as well
+        if self._group is not None:
+            return {
+                "amplipi_zones": self._get_zone_ids(),
+                "is_group": True,
+                "stream_connected": self._stream is not None,
+            }
+        else:
+            return {
+                "stream_connected": self._stream is not None,
+                "is_group": False,
+                "amplipi_zone_id": self._zone.id,
+            }
 
     def _get_zone_ids(self) -> List[int]:
         if self._group is not None:
