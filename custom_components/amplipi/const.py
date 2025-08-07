@@ -1,5 +1,4 @@
 """Constants for the AmpliPi integration."""
-from homeassistant.components.media_player import MediaPlayerEntityFeature
 
 DOMAIN = "amplipi"
 CONF_VENDOR = "vendor"
