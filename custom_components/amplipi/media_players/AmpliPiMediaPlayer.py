@@ -9,15 +9,37 @@ from typing import List, Optional, Union
 import validators
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components import persistent_notification
-from homeassistant.components.media_player import MediaPlayerEntity
+from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerEntityFeature
 from pyamplipi.models import ZoneUpdate, SourceUpdate, MultiZoneUpdate
 
 from ..func import get_fixed_source_id, has_fixed_source
 from ..coordinator import AmpliPiDataClient
 from ..models import Source, Group, Zone, Stream
-from ..const import SUPPORT_AMPLIPI_DAC, DEFAULT_SUPPORTED_COMMANDS, SUPPORT_LOOKUP_DICT
 
 _LOGGER = logging.getLogger(__name__)
+
+SUPPORT_AMPLIPI_DAC = (
+    MediaPlayerEntityFeature.SELECT_SOURCE
+    | MediaPlayerEntityFeature.PLAY_MEDIA
+    | MediaPlayerEntityFeature.VOLUME_MUTE
+    | MediaPlayerEntityFeature.VOLUME_SET
+    | MediaPlayerEntityFeature.GROUPING
+    | MediaPlayerEntityFeature.VOLUME_STEP
+    | MediaPlayerEntityFeature.BROWSE_MEDIA
+)
+
+DEFAULT_SUPPORTED_COMMANDS = ( # Used to forcibly support a shortlist of commands regardless of sub-type
+    MediaPlayerEntityFeature.TURN_OFF
+    | MediaPlayerEntityFeature.TURN_ON
+)
+
+SUPPORT_LOOKUP_DICT = {
+    'play': MediaPlayerEntityFeature.PLAY,
+    'pause': MediaPlayerEntityFeature.PAUSE,
+    'stop': MediaPlayerEntityFeature.STOP,
+    'next': MediaPlayerEntityFeature.NEXT_TRACK,
+    'prev': MediaPlayerEntityFeature.PREVIOUS_TRACK,
+}
 
 class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     """

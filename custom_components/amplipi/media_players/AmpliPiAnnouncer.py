@@ -3,7 +3,7 @@
 import logging
 
 from homeassistant.components import media_source
-from homeassistant.components.media_player import MediaPlayerEntity, MediaType
+from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerEntityFeature, MediaType
 from homeassistant.components.media_player.browse_media import (
     async_process_play_media_url,
 )
@@ -11,9 +11,13 @@ from homeassistant.const import STATE_IDLE
 from pyamplipi.amplipi import AmpliPi
 from pyamplipi.models import Announcement
 
-from ..const import SUPPORT_AMPLIPI_ANNOUNCE
-
 _LOGGER = logging.getLogger(__name__)
+
+SUPPORT_AMPLIPI_ANNOUNCE = (
+    MediaPlayerEntityFeature.PLAY_MEDIA
+    | MediaPlayerEntityFeature.BROWSE_MEDIA
+    | MediaPlayerEntityFeature.VOLUME_SET
+)
 
 class AmpliPiAnnouncer(MediaPlayerEntity):
     # Doesn't need to extend AmpliPiMediaPlayer due to being far simpler than those components
