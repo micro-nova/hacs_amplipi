@@ -12,7 +12,7 @@ from homeassistant.const import STATE_PLAYING, STATE_PAUSED, STATE_IDLE, STATE_U
 from homeassistant.helpers.entity import DeviceInfo
 from pyamplipi.models import ZoneUpdate, MultiZoneUpdate, PlayMedia
 
-from .media_player import AmpliPiMediaPlayer
+from .base import AmpliPiMediaPlayer
 from ..coordinator import AmpliPiDataClient
 from ..const import DOMAIN
 from ..models import Source, Group, Zone, Stream

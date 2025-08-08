@@ -7,7 +7,7 @@ from .coordinator import AmpliPiDataClient
 from .const import (
     DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, )
 
-from .media_players.media_player import AmpliPiMediaPlayer
+from .media_players.base import AmpliPiMediaPlayer
 from .media_players.source import AmpliPiSource
 from .media_players.stream import AmpliPiStream
 from .media_players.zone import AmpliPiZone

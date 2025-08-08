@@ -10,7 +10,7 @@ from homeassistant.components.media_player.browse_media import (
 from homeassistant.const import STATE_PLAYING, STATE_PAUSED, STATE_IDLE, STATE_UNKNOWN, STATE_OFF
 from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, MultiZoneUpdate, PlayMedia
 
-from .media_player import AmpliPiMediaPlayer
+from .base import AmpliPiMediaPlayer
 from ..coordinator import AmpliPiDataClient
 from ..models import Source, Stream
 from ..utils import get_fixed_source_id
