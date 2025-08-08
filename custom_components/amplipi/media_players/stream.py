@@ -6,7 +6,7 @@ from typing import List, Optional
 from homeassistant.const import STATE_PLAYING, STATE_PAUSED, STATE_IDLE, STATE_UNKNOWN, STATE_OFF
 from pyamplipi.models import ZoneUpdate, SourceUpdate, MultiZoneUpdate
 
-from .AmpliPiMediaPlayer import AmpliPiMediaPlayer
+from .media_player import AmpliPiMediaPlayer
 from ..coordinator import AmpliPiDataClient
 from ..models import Source, Group, Zone, Stream
 from ..utils import get_fixed_source_id, has_fixed_source

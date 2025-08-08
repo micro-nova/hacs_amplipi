@@ -7,11 +7,11 @@ from .coordinator import AmpliPiDataClient
 from .const import (
     DOMAIN, AMPLIPI_OBJECT, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, )
 
-from .media_players.AmpliPiMediaPlayer import AmpliPiMediaPlayer
-from .media_players.AmpliPiSource import AmpliPiSource
-from .media_players.AmpliPiStream import AmpliPiStream
-from .media_players.AmpliPiZone import AmpliPiZone
-from .media_players.AmpliPiAnnouncer import AmpliPiAnnouncer
+from .media_players.media_player import AmpliPiMediaPlayer
+from .media_players.source import AmpliPiSource
+from .media_players.stream import AmpliPiStream
+from .media_players.zone import AmpliPiZone
+from .media_players.announce import AmpliPiAnnouncer
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the AmpliPi MultiZone Audio Controller"""
