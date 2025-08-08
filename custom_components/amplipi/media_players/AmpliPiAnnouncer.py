@@ -1,4 +1,4 @@
-"""Support for interfacing with the AmpliPi Multizone home audio controller."""
+"""Support for interfacing with the AmpliPi Multizone home audio controller's Announcement Endpoint."""
 # pylint: disable=W1203
 import logging
 

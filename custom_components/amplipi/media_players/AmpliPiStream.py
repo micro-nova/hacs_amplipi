@@ -1,4 +1,4 @@
-"""Support for interfacing with the AmpliPi Multizone home audio controller."""
+"""Support for interfacing with the AmpliPi Multizone home audio controller's audio inputs (Known as Streams)."""
 # pylint: disable=W1203
 import logging
 from typing import List, Optional
@@ -9,7 +9,7 @@ from pyamplipi.models import ZoneUpdate, SourceUpdate, MultiZoneUpdate
 from .AmpliPiMediaPlayer import AmpliPiMediaPlayer
 from ..coordinator import AmpliPiDataClient
 from ..models import Source, Group, Zone, Stream
-from ..func import get_fixed_source_id, has_fixed_source
+from ..utils import get_fixed_source_id, has_fixed_source
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -251,4 +251,3 @@ class AmpliPiStream(AmpliPiMediaPlayer):
         if self._stream is None:
             return False
         return True
-    

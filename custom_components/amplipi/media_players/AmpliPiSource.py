@@ -1,4 +1,4 @@
-"""Support for interfacing with the AmpliPi Multizone home audio controller."""
+"""Support for interfacing with the AmpliPi Multizone home audio controller's four Sources."""
 # pylint: disable=W1203
 import logging
 from typing import List
@@ -13,7 +13,7 @@ from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, MultiZoneUpd
 from .AmpliPiMediaPlayer import AmpliPiMediaPlayer
 from ..coordinator import AmpliPiDataClient
 from ..models import Source, Stream
-from ..func import get_fixed_source_id
+from ..utils import get_fixed_source_id
 
 _LOGGER = logging.getLogger(__name__)
 

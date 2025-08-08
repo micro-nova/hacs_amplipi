@@ -1,4 +1,4 @@
-"""Support for interfacing with the AmpliPi Multizone home audio controller."""
+"""Support for interfacing with the AmpliPi Multizone home audio controller's various entities."""
 # pylint: disable=W1203
 import logging
 import operator
@@ -12,7 +12,7 @@ from homeassistant.components import persistent_notification
 from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerEntityFeature
 from pyamplipi.models import ZoneUpdate, SourceUpdate, MultiZoneUpdate
 
-from ..func import get_fixed_source_id, has_fixed_source
+from ..utils import get_fixed_source_id, has_fixed_source
 from ..coordinator import AmpliPiDataClient
 from ..models import Source, Group, Zone, Stream
 
