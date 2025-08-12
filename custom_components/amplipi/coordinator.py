@@ -2,6 +2,7 @@
     AmpliPi API data coordinator
     Used to synchronize the current AmpliPi state with all of the corresponding HA Entities
 """
+import logging
 from datetime import timedelta
 from typing import Optional, Union, Callable
 from packaging.version import Version
@@ -16,15 +17,14 @@ from pyamplipi.models import SourceUpdate, ZoneUpdate, MultiZoneUpdate, GroupUpd
 from .models import Status, Source, Zone, Group, Stream
 from .const import DOMAIN
 
+_LOGGER = logging.getLogger(__name__)
 class AmpliPiDataClient(DataUpdateCoordinator, AmpliPi):
-    def __init__(self, hass, logger, config_entry, endpoint, timeout, http_session):
+    def __init__(self, hass, endpoint, timeout, http_session):
         super().__init__(
             hass,
-            logger,
-            config_entry=config_entry,
+            _LOGGER,
             name="hacs_amplipi",
             update_interval=timedelta(seconds=2),
-            always_update=True
         )
 
         AmpliPi.__init__(
@@ -113,7 +113,7 @@ class AmpliPiDataClient(DataUpdateCoordinator, AmpliPi):
         """Intercept the return of a function and consume the data into the data coordinator"""
         async def wrapper(self, *args, **kwargs):
             resp = await func(self, *args, **kwargs)
-            return await self.set_data(resp.dict())
+            return await self.set_data(resp.model_dump())
         return wrapper
 
     @intercept_and_consume
