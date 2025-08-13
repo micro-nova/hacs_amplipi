@@ -312,7 +312,7 @@ class AmpliPiZone(AmpliPiMediaPlayer):
             else:
                 await self._update_zone(disconnect_update)
         else:
-            entity = self.get_entry_by_value(source)
+            entity = self._data_client.get_entry_by_value(source)
             args = (entity, None, [self._id]) if self._group is not None else (entity, [self._id], None)
             if isinstance(entity, Stream):
                 await self.async_connect_zones_to_stream(*args)

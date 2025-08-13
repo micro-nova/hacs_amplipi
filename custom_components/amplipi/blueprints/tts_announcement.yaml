@@ -11,6 +11,16 @@ blueprint:
       selector:
         trigger:
 
+    zones:
+      name: "Zones"
+      description: "Select one or more zones/groups for audio output"
+      selector:
+        entity:
+          filter:
+            - device_class: speaker
+            - integration: AmpliPi
+          multiple: true
+
     message:
       name: "Message"
       description: "What would you like to announce?"
@@ -18,6 +28,17 @@ blueprint:
       selector:
         text:
           multiline: true
+
+    volume:
+      name: "Volume"
+      description: "Select what volume to start the zones on"
+      default: 0.5
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.01
+          mode: slider
 
     cache:
       name: "Cache"
@@ -31,6 +52,21 @@ mode: single
 trigger: !input trigger_input
 
 action:
+  - service: media_player.volume_set
+    data:
+      volume_level: !input volume
+    target:
+      entity_id: media_player.amplipi_announcement
+
+  - repeat:
+      for_each: !input zones
+      sequence:
+        - service: media_player.select_source
+          target:
+            entity_id: media_player.amplipi_announcement
+          data:
+            source: "{{ repeat.item }}"
+
   - service: tts.speak
     data:
       cache: !input cache

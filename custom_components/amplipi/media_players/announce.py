@@ -1,6 +1,7 @@
 """Support for interfacing with the AmpliPi Multizone home audio controller's Announcement Endpoint."""
 # pylint: disable=W1203
 import logging
+from typing import Optional
 
 from homeassistant.components import media_source
 from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerEntityFeature, MediaType
@@ -8,8 +9,10 @@ from homeassistant.components.media_player.browse_media import (
     async_process_play_media_url,
 )
 from homeassistant.const import STATE_IDLE
-from pyamplipi.amplipi import AmpliPi
 from pyamplipi.models import Announcement
+
+from ..coordinator import AmpliPiDataClient
+from ..models import Zone, Group
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -17,6 +20,7 @@ SUPPORT_AMPLIPI_ANNOUNCE = (
     MediaPlayerEntityFeature.PLAY_MEDIA
     | MediaPlayerEntityFeature.BROWSE_MEDIA
     | MediaPlayerEntityFeature.VOLUME_SET
+    | MediaPlayerEntityFeature.SELECT_SOURCE
 )
 
 class AmpliPiAnnouncer(MediaPlayerEntity):
@@ -28,7 +32,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
 
     def __init__(self, namespace: str,
                  vendor: str, version: str, image_base_path: str,
-                 client: AmpliPi):
+                 client: AmpliPiDataClient):
         self._source = None
 
         self._unique_id = f"{namespace}_announcement"
@@ -44,6 +48,8 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         self._name = "Announcement Channel"
         self._attr_name = self._name
         self._volume = 0.5
+        self._selected_zones: list = []
+        self._selected_groups: list = []
 
     @property
     def available(self):
@@ -76,6 +82,11 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
     @property
     def state(self):
         return STATE_IDLE
+    
+    def deselect(self):
+        """Deselect all zones and groups"""
+        self._selected_zones = []
+        self._selected_groups = []
 
     async def async_browse_media(self, media_content_type=None, media_content_id=None):
         """Implement the websocket media browsing helper."""
@@ -88,7 +99,7 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
     async def async_play_media(self, media_type, media_id, **kwargs):
         _LOGGER.debug(f'Play Media {media_type} {media_id} {kwargs}')
         if media_source.is_media_source_id(media_id):
-            play_item = await media_source.async_resolve_media(self.hass, media_id)
+            play_item = await media_source.async_resolve_media(self.hass, media_id, target_media_player=self.entity_id)
             media_id = play_item.url
             _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
@@ -96,13 +107,26 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
         await self._data_client.announce(
             Announcement(
                 media=media_id,
-                vol_f=self._volume
+                vol_f=self._volume,
+                zones=self._selected_zones,
+                groups=self._selected_groups
             )
         )
+        _LOGGER.warning("deselecting due to announcement")
         pass
-
 
     async def async_set_volume_level(self, volume):
         if volume is None:
             return
         self._volume = volume
+
+    async def async_select_source(self, source: Optional[str] = None):
+        if source in [None, "None"]:
+            self.deselect()
+        else:
+            amplipi_entity = self._data_client.get_entry_by_value(source)
+            if amplipi_entity:
+                if isinstance(amplipi_entity, Zone):
+                    self._selected_zones.append(amplipi_entity.id)
+                elif isinstance(amplipi_entity, Group):
+                    self._selected_groups.append(amplipi_entity.id)

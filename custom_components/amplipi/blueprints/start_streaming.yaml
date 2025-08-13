@@ -51,6 +51,7 @@ blueprint:
           max: 1
           step: 0.01
           mode: slider
+
 mode: single
 
 trigger: !input trigger_input
@@ -65,7 +66,6 @@ action:
   - repeat:
       for_each: !input zones
       sequence:
-          
         - service: media_player.volume_set
           data:
             volume_level: !input volume
