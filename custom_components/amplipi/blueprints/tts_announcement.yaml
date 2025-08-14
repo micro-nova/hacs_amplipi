@@ -13,7 +13,7 @@ blueprint:
 
     zones:
       name: "Zones"
-      description: "Select one or more zones/groups for audio output"
+      description: "Select one or more zones/groups for audio output. If nothing is selcted, announcement plays to all zones"
       default: []
       selector:
         entity:
