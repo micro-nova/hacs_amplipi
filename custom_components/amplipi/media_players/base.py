@@ -2,9 +2,8 @@
 # pylint: disable=W1203
 import logging
 import operator
-import re
 from functools import reduce
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import validators
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -12,7 +11,7 @@ from homeassistant.components import persistent_notification
 from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerEntityFeature
 from pyamplipi.models import ZoneUpdate, SourceUpdate, MultiZoneUpdate
 
-from ..utils import get_fixed_source_id, has_fixed_source
+from ..utils import get_fixed_source_id, has_fixed_source, extract_amplipi_id_from_unique_id
 from ..coordinator import AmpliPiDataClient
 from ..models import Source, Group, Zone, Stream
 
@@ -74,7 +73,6 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
     # List of various arbitrary extra state attributes. Home assistant expects this list to exist, but it doesn't necessarily contain anything in most of our cases.
     _extra_attributes: dict = {}
 
-
     # Does home assistant let you interact with the entity? False by default, made true if the entity is able to poll properly.
     _available: bool = False
 
@@ -83,32 +81,6 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
 
     # The displayname of the entity. Also what is passed to async_select_source via dropdown menus.
     _name: str
-
-    def get_entry_by_value(self, value: str) -> Union[Source, Zone, Group, Stream, None]:
-        """Find what dict within the state array has a given value and return said dict"""
-        if self._data_client.data is not None:
-            for category in (self._data_client.data.sources, self._data_client.data.zones, self._data_client.data.groups, self._data_client.data.streams):
-                for entry in category:
-                    if value in entry.model_dump().values():
-                        return entry
-        return None
-            
-    def extract_amplipi_id_from_unique_id(self, uid: str) -> Optional[int]:
-        """
-            Extracts all digits from a string and returns them\n
-            Useful for getting amplipi-side ids out of entity unique_ids due to the unique_id being formatted as "media_player.amplipi_{stream, group, zone, or source}_{amplipi-side id}"\n
-            Examples:\n
-            media_player.amplipi_stream_1000\n
-            media_player.amplipi_source_0
-        """
-        match = re.search(r"\d+", uid)
-        if match:
-            return int(match.group())
-        if uid != "amplipi_announcement":
-            # amplipi_announcement is the only amplipi entity without numbers in its id
-            # Filter against that before sending an error message so you don't print an error every few seconds whenever a source polls for the source list
-            _LOGGER.error(f"extract_amplipi_id_from_unique_id could not determine entity ID: {uid}")
-        return None
 
     def available_streams(self, source: Source):
         """Returns the available streams (generally all of them minus three of the four RCAs) relative to the provided source"""
@@ -120,7 +92,7 @@ class AmpliPiMediaPlayer(MediaPlayerEntity, CoordinatorEntity):
             stream_entries = self._data_client.data.streams
             if stream_entries:
                 for entry in stream_entries:
-                    amplipi_id = self.extract_amplipi_id_from_unique_id(entry.unique_id)
+                    amplipi_id = extract_amplipi_id_from_unique_id(entry.unique_id)
                     if amplipi_id == rca_selectable or amplipi_id not in RCAs:
                         streams.append(entry.friendly_name if entry.friendly_name not in [None, 'None'] else entry.original_name)
         return streams

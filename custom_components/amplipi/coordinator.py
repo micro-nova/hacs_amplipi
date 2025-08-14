@@ -34,6 +34,16 @@ class AmpliPiDataClient(DataUpdateCoordinator, AmpliPi):
             http_session=http_session
         )
 
+        
+    def get_entry_by_value(self, value: str) -> Union[Source, Zone, Group, Stream, None]:
+        """Find what dict within the state array has a given value and return said dict"""
+        if self.data is not None:
+            for category in (self.data.sources, self.data.zones, self.data.groups, self.data.streams):
+                for entry in category:
+                    if value in entry.model_dump().values():
+                        return entry
+        return None
+
     async def get_friendly_name(self, entity_id):
         """Look up entity in hass.states and get the friendly name"""
         state = self.hass.states.get(entity_id)

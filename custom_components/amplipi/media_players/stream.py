@@ -9,7 +9,7 @@ from pyamplipi.models import ZoneUpdate, SourceUpdate, MultiZoneUpdate
 from .base import AmpliPiMediaPlayer
 from ..coordinator import AmpliPiDataClient
 from ..models import Source, Group, Zone, Stream
-from ..utils import get_fixed_source_id, has_fixed_source
+from ..utils import get_fixed_source_id, has_fixed_source, extract_amplipi_id_from_unique_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -226,17 +226,15 @@ class AmpliPiStream(AmpliPiMediaPlayer):
             elif source == "Any" and self._source is None:
                 await self.async_connect_stream_to_source(self._stream)
             else:
-                amplipi_entity = self.get_entry_by_value(source)
+                amplipi_entity = self._data_client.get_entry_by_value(source)
                 if isinstance(amplipi_entity, Source):
                     await self.async_connect_stream_to_source(self._stream, amplipi_entity)
-                else:
-                    entry = self.get_entry_by_value(source)
-                    if entry:
-                        entry_id = self.extract_amplipi_id_from_unique_id(entry.unique_id)
-                        if isinstance(amplipi_entity, Zone):
-                            await self.async_connect_zones_to_stream(self._stream, [entry_id], None)
-                        elif isinstance(amplipi_entity, Group):
-                            await self.async_connect_zones_to_stream(self._stream, None, [entry_id])
+                elif amplipi_entity:
+                    entry_id = extract_amplipi_id_from_unique_id(amplipi_entity.unique_id)
+                    if isinstance(amplipi_entity, Zone):
+                        await self.async_connect_zones_to_stream(self._stream, [entry_id], None)
+                    elif isinstance(amplipi_entity, Group):
+                        await self.async_connect_zones_to_stream(self._stream, None, [entry_id])
 
     @property
     def source_list(self):

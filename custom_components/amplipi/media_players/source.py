@@ -13,7 +13,7 @@ from pyamplipi.models import ZoneUpdate, SourceUpdate, GroupUpdate, MultiZoneUpd
 from .base import AmpliPiMediaPlayer
 from ..coordinator import AmpliPiDataClient
 from ..models import Source, Stream
-from ..utils import get_fixed_source_id
+from ..utils import get_fixed_source_id, extract_amplipi_id_from_unique_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -159,8 +159,8 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             )
         else:
             # Process both the input and the known name in case the entity_id is sent back for processing
-            stream_hacs_entity = self.get_entry_by_value(source)
-            stream_id = self.extract_amplipi_id_from_unique_id(stream_hacs_entity.unique_id)
+            stream_hacs_entity = self._data_client.get_entry_by_value(source)
+            stream_id = extract_amplipi_id_from_unique_id(stream_hacs_entity.unique_id)
             if stream_id is not None:
                 await self._data_client.set_source(
                     self._id,
@@ -274,7 +274,7 @@ class AmpliPiSource(AmpliPiMediaPlayer):
             if self._source.input == 'local':
                 return self._source.name
             elif self._stream is not None:
-                stream = self.get_entry_by_value(self._stream.name)
+                stream = self._data_client.get_entry_by_value(self._stream.name)
                 if stream:
                     return stream.friendly_name if stream.friendly_name not in [None, 'None'] else stream.original_name
         return 'None'
