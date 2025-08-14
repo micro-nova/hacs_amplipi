@@ -104,6 +104,9 @@ class AmpliPiAnnouncer(MediaPlayerEntity):
             _LOGGER.info(f'Playing media source: {play_item} {media_id}')
 
         media_id = async_process_play_media_url(self.hass, media_id)
+        if len(self._selected_zones) == 0 and len(self._selected_groups) == 0:
+            # When nothing is selected, play everywhere
+            self._selected_zones = [z.id for z in self._data_client.data.zones]
         await self._data_client.announce(
             Announcement(
                 media=media_id,

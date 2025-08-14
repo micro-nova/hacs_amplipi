@@ -24,7 +24,6 @@ blueprint:
     message:
       name: "Message"
       description: "What would you like to announce?"
-      default: "Any"
       selector:
         text:
           multiline: true
