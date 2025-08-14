@@ -14,6 +14,7 @@ blueprint:
     zones:
       name: "Zones"
       description: "Select one or more zones/groups for audio output"
+      default: []
       selector:
         entity:
           filter:
