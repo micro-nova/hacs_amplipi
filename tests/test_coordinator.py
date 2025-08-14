@@ -35,6 +35,6 @@ async def test_coordinator_setup(hass: HomeAssistant):
 
     # Process data, convert to json for apples to apples comparison
     data = await data_client.set_data(base_data)
-    result = data.model_dump_json()
+    result = data.model_dump()
 
     assert result == expected_data, "transformed data does not match expected data"
