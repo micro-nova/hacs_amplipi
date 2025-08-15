@@ -13,7 +13,6 @@ from homeassistant.components import zeroconf
 from homeassistant.const import CONF_ID, CONF_NAME, CONF_PORT, CONF_HOST
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import DiscoveryInfoType
 from pyamplipi.amplipi import AmpliPi
 
 from .const import DOMAIN, CONF_VENDOR, CONF_VERSION, CONF_WEBAPP, CONF_API_PATH
@@ -43,8 +42,8 @@ async def async_retrieve_info(hass, host, port):
         _LOGGER.error("Timed out when connecting to AmpliPi Controller")
         raise
 
-
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+# Your IDE might complain about the domain attribute here, it is mandatory to the function of this component
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type: ignore
     """Handle a config flow for AmpliPi."""
 
     VERSION = 1
@@ -52,13 +51,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self):
         """Initialize flow."""
         self._controller_hostname: str | None = None
-        self._controller_port: int | None = None
-        self._name: str | None = None
+        self._controller_port: int = 80
+        self._name: str = "AmpliPi"
         self._uuid: str | None = None
-        self._vendor: str | None = None
+        self._vendor: str = "Micro-Nova"
         self._version: str | None = None
         self._webapp_url: str | None = None
-        self._api_path: str | None = None
+        self._api_path: str = "/api"
 
     @callback
     def _async_get_entry(self):
@@ -109,11 +108,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._controller_hostname = user_input[CONF_HOST]
                 self._controller_port = user_input[CONF_PORT]
                 self._name = "AmpliPi"
-                self._vendor = "Unknown"
+                self._vendor = "Micro-Nova"
                 self._version = "Unknown"
                 self._uuid = ""  # this is not right.  we need a uuid
                 self._webapp_url = f"http://${user_input[CONF_HOST]}"
-                self._api_path = f"/api"
+                self._api_path = "/api"
 
                 return self._async_get_entry()
             except CannotConnect:

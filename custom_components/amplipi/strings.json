@@ -1,6 +1,14 @@
 {
   "config": {
     "step": {
+      "host": {
+        "title": "Host",
+        "description": "The IP as seen on the front screen of your AmpliPro device"
+      },
+      "port": {
+        "title": "Port",
+        "description": "The port that your AmpliPi API is accessibly by. If you have not set a custom port, this should be port 80."
+      },
       "discovery_confirm": {
         "description": "This is a description [%key:common::config_flow::description::confirm_setup%]"
       }
