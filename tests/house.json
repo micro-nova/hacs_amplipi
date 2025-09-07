@@ -1,0 +1,610 @@
+{
+    "version": 1,
+    "sources": [
+        {
+            "id": 0,
+            "name": "Output 1",
+            "input": "stream=1000",
+            "info": {
+                "name": "Groove Salad - internetradio",
+                "state": "playing",
+                "type": "internetradio",
+                "artist": "Blugazer",
+                "track": "Morning Dove Ln",
+                "station": "Groove Salad [SomaFM]",
+                "img_url": "https://somafm.com/img3/groovesalad-400.jpg",
+                "supported_cmds": [
+                    "play",
+                    "stop"
+                ]
+            }
+        },
+        {
+            "id": 1,
+            "name": "Output 2",
+            "input": "stream=1001",
+            "info": {
+                "name": "Connect to StevePi 1 on Spotify Connect",
+                "state": "playing",
+                "type": "spotify",
+                "img_url": "static/imgs/spotify.png",
+                "supported_cmds": [
+                    "play",
+                    "pause",
+                    "next",
+                    "prev"
+                ]
+            }
+        },
+        {
+            "id": 2,
+            "name": "Output 3",
+            "input": "stream=1002",
+            "info": {
+                "name": "StevePi 2 - spotify",
+                "state": "stopped",
+                "type": "spotify",
+                "artist": "Them Crooked Vultures",
+                "track": "Gunman",
+                "album": "Them Crooked Vultures",
+                "img_url": "https://i.scdn.co/image/ab67616d00001e027355bb17937d57983e09f9f9",
+                "supported_cmds": [
+                    "play"
+                ]
+            }
+        },
+        {
+            "id": 3,
+            "name": "Output 4",
+            "input": "None",
+            "info": {
+                "name": "None",
+                "state": "stopped",
+                "img_url": "static/imgs/disconnected.png",
+                "supported_cmds": []
+            }
+        }
+    ],
+    "zones": [
+        {
+            "id": 0,
+            "name": "The one I plug my amp into",
+            "source_id": 0,
+            "mute": false,
+            "vol": -10,
+            "vol_f": 0.5,
+            "vol_min": -20,
+            "vol_max": 0,
+            "disabled": false
+        },
+        {
+            "id": 1,
+            "name": "Zone 2",
+            "source_id": 0,
+            "mute": true,
+            "vol": -40,
+            "vol_f": 0.5,
+            "vol_min": -80,
+            "vol_max": 0,
+            "disabled": false
+        },
+        {
+            "id": 2,
+            "name": "Zone 3",
+            "source_id": 0,
+            "mute": false,
+            "vol": -40,
+            "vol_f": 0.5,
+            "vol_min": -80,
+            "vol_max": 0,
+            "disabled": false
+        },
+        {
+            "id": 3,
+            "name": "Zone 4",
+            "source_id": 0,
+            "mute": true,
+            "vol": -40,
+            "vol_f": 0.5,
+            "vol_min": -80,
+            "vol_max": 0,
+            "disabled": false
+        },
+        {
+            "id": 4,
+            "name": "Zone 5",
+            "source_id": 0,
+            "mute": false,
+            "vol": -40,
+            "vol_f": 0.5,
+            "vol_min": -80,
+            "vol_max": 0,
+            "disabled": false
+        },
+        {
+            "id": 5,
+            "name": "Zone 6",
+            "source_id": 0,
+            "mute": true,
+            "vol": -40,
+            "vol_f": 0.5,
+            "vol_min": -80,
+            "vol_max": 0,
+            "disabled": false
+        }
+    ],
+    "groups": [
+        {
+            "id": 103,
+            "name": "Odds",
+            "source_id": 0,
+            "zones": [
+                0,
+                2,
+                4
+            ],
+            "mute": false,
+            "vol_delta": -40,
+            "vol_f": 0.5
+        },
+        {
+            "id": 104,
+            "name": "Evens",
+            "source_id": 0,
+            "zones": [
+                1,
+                3,
+                5
+            ],
+            "mute": true,
+            "vol_delta": -40,
+            "vol_f": 0.5
+        },
+        {
+            "id": 105,
+            "name": "First Half",
+            "source_id": 0,
+            "zones": [
+                0,
+                1,
+                2
+            ],
+            "mute": false,
+            "vol_delta": -40,
+            "vol_f": 0.5
+        },
+        {
+            "id": 106,
+            "name": "Second Half",
+            "source_id": 0,
+            "zones": [
+                3,
+                4,
+                5
+            ],
+            "mute": false,
+            "vol_delta": -40,
+            "vol_f": 0.5
+        }
+    ],
+    "streams": [
+        {
+            "id": 995,
+            "name": "Aux",
+            "type": "aux",
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 996,
+            "name": "Input 1",
+            "type": "rca",
+            "index": 0,
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 997,
+            "name": "Input 2",
+            "type": "rca",
+            "index": 1,
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 998,
+            "name": "Input 3",
+            "type": "rca",
+            "index": 2,
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 999,
+            "name": "Input 4",
+            "type": "rca",
+            "index": 3,
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 1000,
+            "name": "Groove Salad",
+            "type": "internetradio",
+            "url": "http://ice6.somafm.com/groovesalad-32-aac",
+            "logo": "https://somafm.com/img3/groovesalad-400.jpg",
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 1001,
+            "name": "StevePi 1",
+            "type": "spotify",
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 1002,
+            "name": "StevePi 2",
+            "type": "spotify",
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 1003,
+            "name": "StevePi 1",
+            "type": "airplay",
+            "disabled": false,
+            "ap2": false,
+            "browsable": false
+        },
+        {
+            "id": 1004,
+            "name": "StevePi 2",
+            "type": "airplay",
+            "disabled": false,
+            "ap2": true,
+            "browsable": false
+        },
+        {
+            "id": 1006,
+            "name": " # RdMix Classic Rock 70s 80s 90s",
+            "type": "internetradio",
+            "url": "https://cast1.torontocast.com:4610/stream",
+            "logo": "https://static.wixstatic.com/media/f361b3_1bad7e5fb9a54196b2ac2c2fe71d6e4f~mv2.jpg",
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 1007,
+            "name": "__ROCK__ by rautemusik (rm.fm)",
+            "type": "internetradio",
+            "url": "https://rock-high.rautemusik.fm/?ref=radiobrowser",
+            "logo": "https://www.rm.fm/favicon.ico",
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 1008,
+            "name": "LMSteve",
+            "type": "lms",
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 1009,
+            "name": "SteveMS",
+            "type": "lms",
+            "server": "192.168.1.214",
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 1010,
+            "name": "Gay FM",
+            "type": "internetradio",
+            "url": "https://icepool.silvacast.com/GAYFM.mp3",
+            "logo": "https://www.gayfm.de/images/logos/logo.png",
+            "disabled": false,
+            "browsable": false
+        },
+        {
+            "id": 1011,
+            "name": "asv",
+            "type": "airplay",
+            "disabled": false,
+            "ap2": false,
+            "browsable": false
+        }
+    ],
+    "presets": [
+        {
+            "id": 10000,
+            "name": "Mute All",
+            "state": {
+                "zones": [
+                    {
+                        "mute": true,
+                        "id": 0
+                    },
+                    {
+                        "mute": true,
+                        "id": 1
+                    },
+                    {
+                        "mute": true,
+                        "id": 2
+                    },
+                    {
+                        "mute": true,
+                        "id": 3
+                    },
+                    {
+                        "mute": true,
+                        "id": 4
+                    },
+                    {
+                        "mute": true,
+                        "id": 5
+                    }
+                ]
+            },
+            "last_used": 1740078389
+        },
+        {
+            "id": 9999,
+            "name": "Restore last config",
+            "state": {
+                "sources": [
+                    {
+                        "name": "Output 1",
+                        "input": "stream=1000",
+                        "id": 0
+                    },
+                    {
+                        "name": "Output 2",
+                        "input": "stream=1001",
+                        "id": 1
+                    },
+                    {
+                        "name": "Output 3",
+                        "input": "stream=1002",
+                        "id": 2
+                    },
+                    {
+                        "name": "Output 4",
+                        "input": "stream=1012",
+                        "id": 3
+                    }
+                ],
+                "zones": [
+                    {
+                        "name": "The one I plug my amp into",
+                        "source_id": 3,
+                        "mute": false,
+                        "vol": -10,
+                        "vol_f": 0.5,
+                        "vol_min": -20,
+                        "vol_max": 0,
+                        "disabled": false,
+                        "id": 0
+                    },
+                    {
+                        "name": "Zone 2",
+                        "source_id": 3,
+                        "mute": false,
+                        "vol": -40,
+                        "vol_f": 0.5,
+                        "vol_min": -80,
+                        "vol_max": 0,
+                        "disabled": false,
+                        "id": 1
+                    },
+                    {
+                        "name": "Zone 3",
+                        "source_id": 3,
+                        "mute": false,
+                        "vol": -40,
+                        "vol_f": 0.5,
+                        "vol_min": -80,
+                        "vol_max": 0,
+                        "disabled": false,
+                        "id": 2
+                    },
+                    {
+                        "name": "Zone 4",
+                        "source_id": 3,
+                        "mute": false,
+                        "vol": -40,
+                        "vol_f": 0.5,
+                        "vol_min": -80,
+                        "vol_max": 0,
+                        "disabled": false,
+                        "id": 3
+                    },
+                    {
+                        "name": "Zone 5",
+                        "source_id": 3,
+                        "mute": false,
+                        "vol": -40,
+                        "vol_f": 0.5,
+                        "vol_min": -80,
+                        "vol_max": 0,
+                        "disabled": false,
+                        "id": 4
+                    },
+                    {
+                        "name": "Zone 6",
+                        "source_id": 3,
+                        "mute": false,
+                        "vol": -40,
+                        "vol_f": 0.5,
+                        "vol_min": -80,
+                        "vol_max": 0,
+                        "disabled": false,
+                        "id": 5
+                    }
+                ],
+                "groups": [
+                    {
+                        "name": "Odds",
+                        "source_id": 3,
+                        "zones": [
+                            0,
+                            2,
+                            4
+                        ],
+                        "mute": false,
+                        "vol_delta": -40,
+                        "vol_f": 0.5,
+                        "id": 103
+                    },
+                    {
+                        "name": "Evens",
+                        "source_id": 3,
+                        "zones": [
+                            1,
+                            3,
+                            5
+                        ],
+                        "mute": false,
+                        "vol_delta": -40,
+                        "vol_f": 0.5,
+                        "id": 104
+                    },
+                    {
+                        "name": "First Half",
+                        "source_id": 3,
+                        "zones": [
+                            0,
+                            1,
+                            2
+                        ],
+                        "mute": false,
+                        "vol_delta": -40,
+                        "vol_f": 0.5,
+                        "id": 105
+                    },
+                    {
+                        "name": "Second Half",
+                        "source_id": 3,
+                        "zones": [
+                            3,
+                            4,
+                            5
+                        ],
+                        "mute": false,
+                        "vol_delta": -40,
+                        "vol_f": 0.5,
+                        "id": 106
+                    }
+                ]
+            }
+        },
+        {
+            "id": 10001,
+            "name": "Youtube",
+            "state": {
+                "sources": [
+                    {
+                        "input": "stream=1004",
+                        "id": 0
+                    }
+                ],
+                "zones": [
+                    {
+                        "source_id": 0,
+                        "mute": false,
+                        "vol": -34,
+                        "id": 0
+                    }
+                ],
+                "groups": []
+            },
+            "last_used": 1745519496
+        },
+        {
+            "id": 10002,
+            "name": "name",
+            "state": {
+                "sources": [
+                    {
+                        "input": "stream=1003",
+                        "id": 3
+                    }
+                ],
+                "zones": [],
+                "groups": []
+            },
+            "last_used": 1745519493
+        },
+        {
+            "id": 10003,
+            "name": "new",
+            "state": {
+                "sources": [
+                    {
+                        "input": "stream=1003",
+                        "id": 0
+                    }
+                ],
+                "zones": [
+                    {
+                        "source_id": 0,
+                        "mute": false,
+                        "vol": -42,
+                        "id": 0
+                    },
+                    {
+                        "source_id": 0,
+                        "mute": false,
+                        "vol": -42,
+                        "id": 2
+                    },
+                    {
+                        "source_id": 0,
+                        "mute": false,
+                        "vol": -55,
+                        "id": 5
+                    }
+                ],
+                "groups": []
+            },
+            "last_used": 1745519491
+        }
+    ],
+    "info": {
+        "version": "0.4.7+5af90a5-dirty",
+        "config_file": "/home/pi/.config/amplipi/house.json",
+        "mock_ctrl": false,
+        "mock_streams": false,
+        "is_streamer": false,
+        "online": true,
+        "latest_release": "0.4.7",
+        "access_key": "",
+        "lms_mode": false,
+        "serial": "298",
+        "expanders": [],
+        "fw": [
+            {
+                "version": "1.9",
+                "git_hash": "de87dba",
+                "git_dirty": true
+            }
+        ],
+        "stream_types_available": [
+            "rca",
+            "airplay",
+            "spotify",
+            "internetradio",
+            "dlna",
+            "pandora",
+            "plexamp",
+            "aux",
+            "fileplayer",
+            "lms",
+            "mediadevice"
+        ],
+        "connected_drives": []
+    }
+}

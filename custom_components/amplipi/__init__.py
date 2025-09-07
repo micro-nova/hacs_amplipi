@@ -17,8 +17,6 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = AmpliPiDataClient(
             hass=hass,
-            config_entry=entry,
-            logger=_LOGGER,
             endpoint=f'http://{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}/api/',
             timeout=10,
             http_session=async_get_clientsession(hass)
